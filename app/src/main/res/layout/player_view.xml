@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:text="New Text"
+        android:id="@+id/txtName"
+        android:gravity="center_vertical|right"
+        android:layout_weight="2" />
+
+    <CheckBox
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/chkOn"
+        android:layout_weight="1" />
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:id="@+id/txtDuration"
+        android:gravity="center_vertical"
+        android:layout_weight="1" />
+
+    <bk2suz.loomus.AudioSegmentView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:padding="3dp"
+        android:layout_weight="4"
+        android:id="@+id/audioSegment"
+        android:visibility="visible">
+    </bk2suz.loomus.AudioSegmentView>
+
+    <ImageButton
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:id="@+id/imbDeleteSegment"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        style="@style/button"
+        android:layout_gravity="center" />
+
+</LinearLayout>

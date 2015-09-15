@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Loomus</string>
+
+    <string name="sure_to_delete_audio">Are you sure about deleting this audio? Once deleted it will be lost forever!</string>
+    <string name="delete_audio">Delete Audio</string>
+    <string name="yes_delete">Yes, delete now!</string>
+    <string name="no_delete">No, not yet!</string>
+    <string name="action_settings">Settings</string>
+</resources>
