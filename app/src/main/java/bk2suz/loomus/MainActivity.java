@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -45,7 +46,7 @@ public class MainActivity extends ActionBarActivity {
         ArrayList<String> maxTimeList = new ArrayList<String>();
         for(float t=0; t<10; t+=0.5) {
             if(t == 0) {
-               continue;
+               maxTimeList.add(Dash);
             } else {
                 maxTimeList.add(String.valueOf(t));
             }

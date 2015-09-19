@@ -12,6 +12,7 @@ import java.util.Date;
 public class AppOverload extends Application {
     private static final String TempAudioFolderName = "tempAudio";
     private static final String PermaAudioFolderName = "permaAudio";
+    private static final String GraphFolderName = "graph";
     private static Context sApplication;
 
     @Override
@@ -30,6 +31,10 @@ public class AppOverload extends Application {
 
     public static File getPermaAudioFile(String fileName) {
         return new File(sApplication.getDir(PermaAudioFolderName, MODE_PRIVATE), fileName);
+    }
+
+    public static File getGraphFile(String fileName) {
+        return new File(sApplication.getDir(GraphFolderName, MODE_PRIVATE), fileName);
     }
 
     public static File getPermaDir() {

@@ -188,6 +188,7 @@ public class Recorder implements Runnable {
                     mHandler.post(getOnErrorRunnable(e.getMessage()));
                 }
                 try {
+                    outputStream.flush();
                     outputStream.close();
                     inputStream.close();
                 } catch (IOException e) {

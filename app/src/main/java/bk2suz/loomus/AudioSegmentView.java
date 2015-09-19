@@ -1,9 +1,11 @@
 package bk2suz.loomus;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -22,9 +24,11 @@ public class AudioSegmentView extends View {
     private float mLeftPosition = 0;
     private float mRightPosition = 1F;
 
-    private Paint mBackgroundPaint;
-    private Paint mPlayHeadPaint;
-    private Paint mSidePaint;
+    private Paint sBackgroundPaint;
+    private Paint sPlayHeadPaint;
+    private Paint sSidePaint;
+    private Paint sSliderPaint;
+    private Bitmap mBackgroundBitmap = null;
 
     private float mWidth, mHeight;
     private OnSegmentChangeListener mOnSegmentChangeListener = null;
@@ -45,20 +49,26 @@ public class AudioSegmentView extends View {
                 break;
             case MotionEvent.ACTION_MOVE:
                 float position = event.getX()/mWidth;
+                if(position<0) position = 0F;
+                else if(position>1F) position=1F;
                 switch (mTouchedSide) {
                     case Left:
+                        if (position>=mRightPosition) break;
                         mLeftPosition = position;
                         if(mOnSegmentChangeListener != null) {
                             mOnSegmentChangeListener.onRegionChange(mLeftPosition, mRightPosition, true);
                         }
                         break;
                     case Right:
+                        if (position<=mLeftPosition) break;
                         mRightPosition = position;
                         if(mOnSegmentChangeListener != null) {
                             mOnSegmentChangeListener.onRegionChange(mLeftPosition, mRightPosition, true);
                         }
                         break;
-                    case Middle: mHeadPosition = position; break;
+                    case Middle:
+                        if(position<mLeftPosition || position>mRightPosition) break;
+                        mHeadPosition = position; break;
                 }
                 invalidate();
                 break;
@@ -82,20 +92,33 @@ public class AudioSegmentView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawRoundRect(new RectF(0, 0, mWidth, mHeight), 3, 3, mBackgroundPaint);
+        canvas.drawRoundRect(new RectF(0, 0, mWidth, mHeight), 3, 3, sBackgroundPaint);
+        if (mBackgroundBitmap != null) {
+            canvas.drawBitmap(
+                    mBackgroundBitmap,
+                    new Rect(0, 0, mBackgroundBitmap.getWidth(), mBackgroundBitmap.getHeight()),
+                    new RectF(0, 0, mWidth, mHeight),
+                    sBackgroundPaint
+            );
+        }
         canvas.drawRoundRect(new RectF(
                 0, 0,
-                mWidth * mHeadPosition, mHeight), 3, 3, mPlayHeadPaint);
+                mWidth * mHeadPosition, mHeight), 3, 3, sPlayHeadPaint);
         if(mLeftPosition>0) {
             canvas.drawRoundRect(new RectF(
                     0, 0,
-                    mWidth * mLeftPosition, mHeight), 3, 3, mSidePaint);
+                    mWidth * mLeftPosition, mHeight), 3, 3, sSidePaint);
         }
         if(mRightPosition<1F) {
             canvas.drawRoundRect(new RectF(
-                    mWidth*mRightPosition, 0,
-                    mWidth, mHeight), 3, 3, mSidePaint);
+                    mWidth * mRightPosition, 0,
+                    mWidth, mHeight), 3, 3, sSidePaint);
         }
+    }
+
+    public void setBackgroundBitmap(Bitmap backgroundBitmap) {
+        mBackgroundBitmap = backgroundBitmap;
+        invalidate();
     }
 
     public void setOnSegmentChangeListener(OnSegmentChangeListener listener) {
@@ -103,17 +126,17 @@ public class AudioSegmentView extends View {
     }
 
     private void doInit(Context context) {
-        mBackgroundPaint = new Paint();
-        mBackgroundPaint.setStyle(Paint.Style.FILL);
-        mBackgroundPaint.setColor(Color.parseColor("#75cb75"));
+        sBackgroundPaint = new Paint();
+        sBackgroundPaint.setStyle(Paint.Style.FILL);
+        sBackgroundPaint.setColor(Color.parseColor("#5d395f"));
 
-        mPlayHeadPaint = new Paint();
-        mPlayHeadPaint.setStyle(Paint.Style.FILL);
-        mPlayHeadPaint.setColor(Color.parseColor("#00a7b7"));
+        sPlayHeadPaint = new Paint();
+        sPlayHeadPaint.setStyle(Paint.Style.FILL);
+        sPlayHeadPaint.setColor(Color.parseColor("#5500a7b7"));
 
-        mSidePaint = new Paint();
-        mSidePaint.setStyle(Paint.Style.FILL);
-        mSidePaint.setColor(Color.parseColor("#55ffffff"));
+        sSidePaint = new Paint();
+        sSidePaint.setStyle(Paint.Style.FILL);
+        sSidePaint.setColor(Color.parseColor("#55ffffff"));
     }
 
     public void setHead(float value) {

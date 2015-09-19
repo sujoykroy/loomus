@@ -9,4 +9,10 @@
         <item name="android:padding">5dp</item>
         <item name="android:layout_margin">2dp</item>
     </style>
+    <style name="track">
+        <item name="android:layout_margin">2dp</item>
+    </style>
+    <style name="trackButton" parent="button">
+        <item name="android:background">@drawable/track_button</item>
+    </style>
 </resources>

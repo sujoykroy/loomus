@@ -1,19 +1,31 @@
 package bk2suz.loomus;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -22,8 +34,9 @@ import java.util.concurrent.TimeUnit;
  * Created by sujoy on 14/9/15.
  */
 public class Player implements Runnable {
-    private static float VolumeGain = 0.25F/8;
+    private static float VolumeGain = 0.25F;
     public static final int TrackBufferMultiplier = 2;
+    private static ExecutorService sGraphExecutor = Executors.newFixedThreadPool(1);
 
     private boolean mIsPlaying;
     private boolean mIsEnabled;
@@ -58,7 +71,8 @@ public class Player implements Runnable {
                 AudioFormat.ENCODING_PCM_16BIT
         );
         mTrackBufferSize = minBufferSize * TrackBufferMultiplier;
-        mPlayPeriodInMilli = (int) Math.floor(100*mTrackBufferSize/(float) Recorder.getSampleRateInHz());
+        if (mTrackBufferSize%2 == 1) mTrackBufferSize += 1;
+        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*0.25F*1000F/(float) Recorder.getSampleRateInHz());
         //Log.d("LOGA", String.format("mPlayPeriodInMilli=%d", mPlayPeriodInMilli));
         try {
             mAudioTrack = new AudioTrack(
@@ -73,7 +87,7 @@ public class Player implements Runnable {
         mSegmentRecord = segmentRecord;
         if(mSegmentRecord != null) {
             try {
-                mInputStream = new BufferedInputStream(new FileInputStream(mSegmentRecord.getFile()));
+                mInputStream = new BufferedInputStream(new FileInputStream(mSegmentRecord.getAudioFile()));
             } catch (Exception e) {
                 throw new Exception("No input file");
             }
@@ -90,8 +104,7 @@ public class Player implements Runnable {
         mOnProgressRunnable = new Runnable() {
             @Override
             public void run() {
-                float head = (mStartFromInByte + mCurrentPositionInByte)/
-                                    (float) mSegmentRecord.getLengthInByte();
+                float head = mCurrentPositionInByte/(float) mDurationInByte;
                 for(PlayerListener listener: mPlayerListeners) {
                     listener.onProgress(head);
                 }
@@ -147,10 +160,11 @@ public class Player implements Runnable {
     }
 
     public void play() {
-        if(!mIsEnabled) return;
         Runnable task = new Runnable() {
             @Override
             public void run() {
+                if(!mIsEnabled) return;
+
                 if(!mIsPlaying) {
                     mIsPlaying = true;
                     mAudioTrack.play();
@@ -216,6 +230,7 @@ public class Player implements Runnable {
                     return;
                 }
                 mCurrentPositionInByte =  byteCount%mDurationInByte;
+                if(mCurrentPositionInByte%2 ==1) mCurrentPositionInByte+=1;
                 try {
                     mInputStream.skip(mStartFromInByte + mCurrentPositionInByte);
                 } catch (IOException e) {
@@ -239,6 +254,7 @@ public class Player implements Runnable {
             return;
         }
 
+        long startTime = new Date().getTime();
         byte[] bytes = new byte[mTrackBufferSize];
         int readCount= 0;
         try {
@@ -248,6 +264,8 @@ public class Player implements Runnable {
             return;
         }
         if(readCount>0) {
+            mCurrentPositionInByte += readCount;
+
             short[] shorts = new short[readCount/2];
             ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
 
@@ -261,7 +279,6 @@ public class Player implements Runnable {
             mAudioTrack.flush();
             mHandler.post(mOnProgressRunnable);
         }
-        mCurrentPositionInByte += readCount;
         if (mCurrentPositionInByte>=mDurationInByte) {
             try {
                 mInputStream.reset();
@@ -271,7 +288,9 @@ public class Player implements Runnable {
                 return;
             }
         }
-        mAudioWriterExecutor.schedule(this, mPlayPeriodInMilli, TimeUnit.MILLISECONDS);
+        long elapsedTime = new Date().getTime()-startTime;
+        //Log.d("LOGA", String.format("mCurrentPositionInByte=%d, mDurationInByte=%d", mCurrentPositionInByte, mDurationInByte));
+        mAudioWriterExecutor.schedule(this, mPlayPeriodInMilli-elapsedTime, TimeUnit.MILLISECONDS);
     }
 
     public String getName() {
@@ -302,7 +321,9 @@ public class Player implements Runnable {
     }
 
     public void setHead(float head) {//fraction of total original audio segment..
-        seek(((long) (head*mSegmentRecord.getLengthInByte())-mStartFromInByte));
+        long byteCount = ((long) (head*mSegmentRecord.getLengthInByte())-mStartFromInByte);
+        if (byteCount%2 == 1) byteCount += 1;
+        seek(byteCount);
     }
 
     public float getRegionLeft() {
@@ -324,6 +345,7 @@ public class Player implements Runnable {
         mStartFromInByte = mSegmentRecord.getStartFromInByte();
         mEndToInByte = mSegmentRecord.getEndToInByte();
         mDurationInByte = mEndToInByte - mStartFromInByte;
+        //Log.d("LOGA", String.format("mStartFromInByte=%d, mEndToInByte=%d, length=%d", mStartFromInByte, mEndToInByte, mSegmentRecord.getAudioFile().length()));
     }
 
     public void toggleDeletable() {
@@ -337,5 +359,138 @@ public class Player implements Runnable {
     public void delete() {
         mSegmentRecord.delete();
         cleanIt();
+    }
+
+    public void loadGraphBitmap() {
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                if (!mSegmentRecord.getWaveGraphFile().isFile()) {
+                    createAndSaveGraphImage();
+                }
+                if(mSegmentRecord.getWaveGraphFile().isFile()) {
+                    loadBitmapFromFile();
+                }
+            }
+        };
+        sGraphExecutor.execute(task);
+    }
+
+    private void loadBitmapFromFile() {
+        float width = 400F;
+        float height = 100F;
+
+        String fileAbsPath = mSegmentRecord.getWaveGraphFile().getAbsolutePath();
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(fileAbsPath, options);
+        if(options.outWidth < 0) return;
+
+        float scaleX = options.outWidth/width;
+        float scaleY = options.outHeight/height;
+        float scale =  Math.max(scaleX, scaleX);
+
+        options.inJustDecodeBounds = false;
+        options.inDither = true;
+        options.inSampleSize = (int) scale;
+
+        Bitmap origBitmap = BitmapFactory.decodeFile(fileAbsPath, options);
+        if(origBitmap == null) return;
+
+        final Bitmap bitmap = Bitmap.createScaledBitmap(origBitmap, (int)width, (int)height, true);
+        origBitmap = null;
+
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                for(PlayerListener listener: mPlayerListeners) listener.onGraphLoad(bitmap);
+            }
+        };
+        mHandler.post(task);
+    }
+
+    public void createAndSaveGraphImage() {
+        float width = 1000F;
+        float height = 400F;
+
+        Bitmap bitmap = Bitmap.createBitmap((int) width, (int) height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        File audioFile = mSegmentRecord.getAudioFile();
+        File graphFile = mSegmentRecord.getWaveGraphFile();
+
+        float pixelToAmplitude = (float) Math.floor((Short.MAX_VALUE-Short.MIN_VALUE)/height);
+        if(pixelToAmplitude==0F) pixelToAmplitude = 1F;//safety
+        float amplitudeToPixel = 1F/pixelToAmplitude;
+
+        float pixelForZeroAmplitude = (Short.MAX_VALUE-Short.MIN_VALUE)*0.5F*amplitudeToPixel;
+
+        int pixelToByteCount = (int) Math.floor(audioFile.length()/width);
+        if(pixelToByteCount%2 == 1) pixelToByteCount += 1;
+        if(pixelToByteCount == 0) pixelToByteCount = 2;//safetey
+
+        int byteByfferSize = pixelToByteCount;
+        int maxByteBufferSize = 1024;
+        if(byteByfferSize>maxByteBufferSize) {
+            int mult = (int) Math.ceil(pixelToByteCount/(float) maxByteBufferSize);
+            byteByfferSize = (int) (pixelToByteCount/mult);
+            if(byteByfferSize%2 == 1) byteByfferSize += 1;//2's multiple
+            pixelToByteCount = byteByfferSize*mult;
+        }
+
+        InputStream audioStream = null;
+        try {
+            audioStream = new BufferedInputStream(new FileInputStream(audioFile));
+        } catch (Exception e) {
+            return;
+        }
+
+        int cumulativeByteReadCount = 0;
+        int byteReadCount;
+        byte[] bytes = new byte[byteByfferSize];
+
+        Paint paint = new Paint();
+        paint.setColor(Color.parseColor("#ccca23"));
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(2);
+
+        float x = 0;
+        int count = 0;
+        StringBuilder bl = new StringBuilder();
+        while(true) {
+            try {
+                byteReadCount = audioStream.read(bytes, 0, byteByfferSize);
+            } catch (IOException e) {
+                break;
+            }
+            if(byteReadCount<=0) break;
+
+            if (cumulativeByteReadCount == 0) {
+                count ++;
+                short[] shorts = new short[byteReadCount / 2];
+                ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+                canvas.drawLine(x, pixelForZeroAmplitude, x, pixelForZeroAmplitude + shorts[0]*amplitudeToPixel, paint);
+                x += 1F;
+            }
+            cumulativeByteReadCount += byteReadCount;
+            if(cumulativeByteReadCount>=pixelToByteCount) cumulativeByteReadCount %= pixelToByteCount;
+        }
+        try {
+            audioStream.close();
+        } catch (IOException e) {}
+
+        OutputStream os = null;
+        try {
+            os = new BufferedOutputStream(new FileOutputStream(graphFile));
+        } catch (FileNotFoundException e) {}
+
+        if(os != null) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
+            try {
+                os.flush();
+                os.close();
+            } catch (IOException e) {
+            }
+        }
     }
 }

@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ public class AudioSegmentRecord {
             ")";
     private static final String SqlDropSchema = "DROP TABLE IF EXISTS " + TableName;
 
-    private static ExecutorService sExecutorSerivice = Executors.newFixedThreadPool(1);
+    private static ExecutorService sDbExecutor = Executors.newFixedThreadPool(1);
     private static Handler sHandler = new Handler(Looper.getMainLooper());
 
     private static class DbHelper extends SQLiteOpenHelper {
@@ -53,28 +52,29 @@ public class AudioSegmentRecord {
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            db.execSQL(SqlDropSchema);
-            db.execSQL(SqlCreateSchema);
+            //db.execSQL(SqlDropSchema);
+            //db.execSQL(SqlCreateSchema);
         }
     }
 
-    private long mRowId;
+    private long mRowId = -1;
     private String mFileName;
     private String mName;
     private long mStartFromInByte;
     private long mEndToInByte;
     private long mLengthInByte;
 
-    public AudioSegmentRecord(long rowId, String name, String fileName, long startFrom, long endTo) {
-        mRowId = rowId;
-        mName = name;
-        mFileName = fileName;
-        mStartFromInByte = startFrom;
-        mEndToInByte = endTo;
+    private static String[] Columns = { FieldRowId, FieldName, FieldFileName, FieldStartFrom, FieldEndTo };
+
+    public AudioSegmentRecord(Cursor cursor) {
+        mRowId = cursor.getLong(0);
+        mName = cursor.getString(1);
+        mFileName = cursor.getString(2);
+        mStartFromInByte = cursor.getLong(3);
+        mEndToInByte = cursor.getLong(4);
 
         File file = AppOverload.getPermaAudioFile(mFileName);
         mLengthInByte = file.length();
-
     }
 
     public AudioSegmentRecord(File file) {
@@ -84,6 +84,52 @@ public class AudioSegmentRecord {
         mEndToInByte = file.length();
         mLengthInByte = file.length();
 
+        add();
+    }
+
+
+    public long getLengthInByte() {
+        return mLengthInByte;
+    }
+
+    public long getStartFromInByte() {
+        return mStartFromInByte;
+    }
+
+    public void setStartFromInByte(long value) {
+        if(value<0) value = 0;
+        mStartFromInByte = value;
+        if(mStartFromInByte%2 == 1) mStartFromInByte += 1;
+    }
+
+    public long getEndToInByte() {
+        return mEndToInByte;
+    }
+
+    public void setEndToInByte(long value) {
+        if(value>mLengthInByte) value = mLengthInByte;
+        mEndToInByte = value;
+        if(mEndToInByte%2 == 1) mEndToInByte += 1;
+    }
+
+    public String getName() {
+        return mName;
+    }
+
+    public void setName(String name) {
+        mName = name;
+    }
+
+    public File getAudioFile() {
+        return AppOverload.getPermaAudioFile(mFileName);
+    }
+
+    public File getWaveGraphFile() {
+        return AppOverload.getGraphFile(mFileName);
+    }
+
+    private void add() {
+        if (mRowId != -1) return;
         Runnable task = new Runnable() {
             @Override
             public void run() {
@@ -99,7 +145,7 @@ public class AudioSegmentRecord {
                 db.close();
             }
         };
-        sExecutorSerivice.execute(task);
+        sDbExecutor.execute(task);
     }
 
     public void save() {
@@ -120,7 +166,7 @@ public class AudioSegmentRecord {
                 db.close();
             }
         };
-        sExecutorSerivice.execute(task);
+        sDbExecutor.execute(task);
     }
 
     public void delete() {
@@ -130,53 +176,22 @@ public class AudioSegmentRecord {
                 DbHelper dbHelper = new DbHelper(AppOverload.getContext());
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
                 if(db == null) return;
-                int rowCount = db.delete(TableName, String.format("%s = ?", FieldRowId),
+                int rowCount = db.delete(
+                        TableName,
+                        String.format("%s = ?", FieldRowId),
                         new String[]{String.valueOf(mRowId)}
                 );
                 db.close();
                 if(rowCount>0) {
-                    getFile().delete();
+                    getAudioFile().delete();
+                    getWaveGraphFile().delete();
                 }
             }
         };
-        sExecutorSerivice.execute(task);
+        sDbExecutor.execute(task);
     }
 
-    public long getLengthInByte() {
-        return mLengthInByte;
-    }
-
-    public long getStartFromInByte() {
-        return mStartFromInByte;
-    }
-
-    public void setStartFromInByte(long value) {
-        mStartFromInByte = value;
-    }
-
-    public long getEndToInByte() {
-        return mEndToInByte;
-    }
-
-    public void setEndToInByte(long value) {
-        mEndToInByte = value;
-    }
-
-    public String getName() {
-        return mFileName;
-    }
-
-    public void setName(String name) {
-        mName = name;
-    }
-
-    public File getFile() {
-        return AppOverload.getPermaAudioFile(mFileName);
-    }
-
-    private static Runnable getOnRecordListLoadRunnable(
-            final ArrayList<AudioSegmentRecord> recordList,
-            final OnLoadListener<ArrayList<AudioSegmentRecord>> listener) {
+    private static Runnable getOnRecordListLoadRunnable(final ArrayList<AudioSegmentRecord> recordList, final OnLoadListener<ArrayList<AudioSegmentRecord>> listener) {
         return new Runnable() {
             @Override
             public void run() {
@@ -195,44 +210,16 @@ public class AudioSegmentRecord {
                 SQLiteDatabase db = dbHelper.getReadableDatabase();
 
                 if(db != null) {
-                    String[] columns = {FieldRowId, FieldName, FieldFileName, FieldStartFrom, FieldEndTo};
-                    Cursor cursor = db.query(TableName, columns, null, null, null, null, null);
+                    Cursor cursor = db.query(TableName, Columns, null, null, null, null, null);
                     while(cursor.moveToNext()) {
-                        AudioSegmentRecord record = new AudioSegmentRecord(
-                                cursor.getLong(0), cursor.getString(1), cursor.getString(2),
-                                cursor.getLong(3), cursor.getLong(4)
-                        );
+                        AudioSegmentRecord record = new AudioSegmentRecord(cursor);
                         recordList.add(record);
                     }
                     db.close();
                 }
-                if(recordList.size()==0) {
-                    File[] files = AppOverload.getPermaDir().listFiles();
-                    if(files != null) {
-                        for(int i=files.length-1; i>=0; i--) {
-                            File file = files[i];
-                            ContentValues values = new ContentValues();
-                            values.put(FieldFileName, file.getName());
-                            values.put(FieldName, file.getName());
-                            values.put(FieldStartFrom, 0);
-                            values.put(FieldEndTo, file.length());
-
-                            db = dbHelper.getWritableDatabase();
-                            if(db != null) {
-                                long rowId = db.insert(TableName, null, values);
-                                db.close();
-                                if(rowId<0) continue;
-                                AudioSegmentRecord record = new AudioSegmentRecord(
-                                        rowId, file.getName(), file.getName(), 0, file.length()
-                                );
-                                recordList.add(record);
-                            }
-                        }
-                    }
-                }
                 sHandler.post(getOnRecordListLoadRunnable(recordList, listener));
             }
         };
-        sExecutorSerivice.execute(task);
+        sDbExecutor.execute(task);
     }
 }

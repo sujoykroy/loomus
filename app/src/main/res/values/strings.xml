@@ -5,5 +5,9 @@
     <string name="delete_audio">Delete Audio</string>
     <string name="yes_delete">Yes, delete now!</string>
     <string name="no_delete">No, not yet!</string>
+    <string name="change_audio_name">Change name of audio</string>
+    <string name="rename_audio">Rename audio</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
     <string name="action_settings">Settings</string>
 </resources>

@@ -1,6 +1,7 @@
 package bk2suz.loomus;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,6 +26,7 @@ public class PlayerListAdapter extends BaseAdapter {
         } catch (Exception e) {
             return;
         }
+        mPlayHead.setIsEnabled(true);
         mPlayHead.addPlayerListener(new PlayHeadPlayerListener());
 
         mPlayers = new ArrayList<Player>();
@@ -144,5 +146,8 @@ public class PlayerListAdapter extends BaseAdapter {
                 reset();
             }
         }
+
+        @Override
+        public void onGraphLoad(Bitmap graphBitmap) {}
     }
 }
