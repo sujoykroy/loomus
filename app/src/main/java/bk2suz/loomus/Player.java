@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
  * Created by sujoy on 14/9/15.
  */
 public class Player implements Runnable {
-    private static float VolumeGain = 0.25F;
     public static final int TrackBufferMultiplier = 2;
     private static ExecutorService sGraphExecutor = Executors.newFixedThreadPool(1);
 
@@ -59,6 +58,8 @@ public class Player implements Runnable {
     private long mDurationInByte;
     private long mStartFromInByte;
     private long mEndToInByte;
+
+    private float mVolume = 1F;
 
     private AudioSegmentRecord mSegmentRecord;
 
@@ -93,6 +94,7 @@ public class Player implements Runnable {
             }
             mInputStream.mark((int)mSegmentRecord.getLengthInByte() + 1);
             buildRegion();
+            mVolume = mSegmentRecord.getVolume();
         }
         mPlayerListeners = new ArrayList<PlayerListener>();
         mHandler = new Handler(Looper.getMainLooper());
@@ -271,7 +273,7 @@ public class Player implements Runnable {
 
             short[] interleaved = new short[readCount];
             for(int i=0; i<readCount/2; i++) {
-                shorts[i] = (short) (VolumeGain*shorts[i]);
+                shorts[i] = (short) (mVolume*shorts[i]);
                 interleaved[i*2] = shorts[i];
                 interleaved[i*2+1] = shorts[i];
             }
@@ -339,6 +341,17 @@ public class Player implements Runnable {
         mSegmentRecord.setEndToInByte((long) (right * mSegmentRecord.getLengthInByte()));
         if(save) mSegmentRecord.save();
         buildRegion();
+    }
+
+    public float getVolume() {
+        return mSegmentRecord.getVolume();
+    }
+
+
+    public void setVolume(float volume, boolean save) {
+        mSegmentRecord.setVolume(volume);
+        mVolume = mSegmentRecord.getVolume();
+        if(save) mSegmentRecord.save();
     }
 
     private void buildRegion() {

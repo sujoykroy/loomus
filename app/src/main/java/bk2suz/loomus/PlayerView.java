@@ -27,6 +27,7 @@ public class PlayerView extends FrameLayout {
     private View mDeleteButton;
     private AudioSegmentView mAudioSegmentView;
     private RegionSliderView mRegionSliderView;
+    private VolumeSliderView mVolumeSliderView;
 
     private ViewPlayerListener mPlayerListener;
     private Player mPlayHead;
@@ -87,6 +88,13 @@ public class PlayerView extends FrameLayout {
                         mPlayHead.setDurationInByte(mPlayer.getDurationInByte());
                     }
                 }
+            }
+        });
+        mVolumeSliderView = (VolumeSliderView) rootView.findViewById(R.id.volumeSlider);
+        mVolumeSliderView.setOnVolumeChangeListener(new VolumeSliderView.OnVolumeChangeListener() {
+            @Override
+            public void onVolumeChange(float volume, boolean ongoing) {
+                mPlayer.setVolume(volume, !ongoing);
             }
         });
 
@@ -172,6 +180,7 @@ public class PlayerView extends FrameLayout {
 
         showName();
         showDuration();
+        mVolumeSliderView.setValue(mPlayer.getVolume());
         mAudioSegmentView.setHead(mPlayer.getHead());
         mRegionSliderView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
         mAudioSegmentView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());

@@ -39,6 +39,7 @@ public class RegionSliderView extends View {
     private float mWidth = 400, mHeight = 300;
 
     private TouchedSide mTouchedSide = TouchedSide.None;
+    private float mTouchOffsetX;
     private OnRegionChangeListener mOnRegionChangeListener = null;
 
     @Override
@@ -46,15 +47,18 @@ public class RegionSliderView extends View {
         switch(event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 if(mLeftBox.contains(event.getX(), event.getY())) {
+                    mTouchOffsetX = event.getX()-mLeftBox.left;
                     mTouchedSide = TouchedSide.Left;
                 } else if (mRightBox.contains(event.getX(), event.getY())) {
+                    mTouchOffsetX = -(mRightBox.right-event.getX());
                     mTouchedSide = TouchedSide.Right;
                 } else {
                     mTouchedSide = TouchedSide.None;
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
-                float position = event.getX()/mWidth;
+                if(mTouchedSide == TouchedSide.None) break;
+                float position = (event.getX()-mTouchOffsetX)/mWidth;
                 if(position<0) position = 0F;
                 else if(position>1F) position = 1F;
                 switch (mTouchedSide) {

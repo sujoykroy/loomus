@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  */
 public class AudioSegmentRecord {
     private static final String DbName = "audioSegment";
-    private static final int DbVersion = 2;
+    private static final int DbVersion = 3;
 
     private static final String TableName = "segment";
 
@@ -27,13 +27,15 @@ public class AudioSegmentRecord {
     private static final String FieldName = "name";
     private static final String FieldStartFrom = "startFrom";
     private static final String FieldEndTo = "endTo";
+    private static final String FieldVolume = "volume";
 
     private static final String SqlCreateSchema = "" +
             "CREATE TABLE IF NOT EXISTS " + TableName + " (" +
             FieldFileName + " TEXT UNIQUE NOT NULL," +
             FieldName + " TEXT NOT NULL," +
             FieldStartFrom + " INT NOT NULL," +
-            FieldEndTo + " INT NOT NULL" +
+            FieldEndTo + " INT NOT NULL," +
+            FieldVolume + " REAL NOT NULL" +
             ")";
     private static final String SqlDropSchema = "DROP TABLE IF EXISTS " + TableName;
 
@@ -52,8 +54,8 @@ public class AudioSegmentRecord {
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            //db.execSQL(SqlDropSchema);
-            //db.execSQL(SqlCreateSchema);
+            db.execSQL(SqlDropSchema);
+            onCreate(db);
         }
     }
 
@@ -63,8 +65,9 @@ public class AudioSegmentRecord {
     private long mStartFromInByte;
     private long mEndToInByte;
     private long mLengthInByte;
+    private float mVolume;
 
-    private static String[] Columns = { FieldRowId, FieldName, FieldFileName, FieldStartFrom, FieldEndTo };
+    private static String[] Columns = { FieldRowId, FieldName, FieldFileName, FieldStartFrom, FieldEndTo, FieldVolume };
 
     public AudioSegmentRecord(Cursor cursor) {
         mRowId = cursor.getLong(0);
@@ -72,6 +75,7 @@ public class AudioSegmentRecord {
         mFileName = cursor.getString(2);
         mStartFromInByte = cursor.getLong(3);
         mEndToInByte = cursor.getLong(4);
+        mVolume = cursor.getFloat(5);
 
         File file = AppOverload.getPermaAudioFile(mFileName);
         mLengthInByte = file.length();
@@ -83,10 +87,10 @@ public class AudioSegmentRecord {
         mStartFromInByte = 0;
         mEndToInByte = file.length();
         mLengthInByte = file.length();
+        mVolume = 0.25F;
 
         add();
     }
-
 
     public long getLengthInByte() {
         return mLengthInByte;
@@ -128,6 +132,16 @@ public class AudioSegmentRecord {
         return AppOverload.getGraphFile(mFileName);
     }
 
+    public float getVolume() {
+        return mVolume;
+    }
+
+    public void setVolume(float volume) {
+        mVolume = volume;
+        if(mVolume<0) mVolume = 0F;
+        else if(mVolume>1F) mVolume = 1F;
+    }
+
     private void add() {
         if (mRowId != -1) return;
         Runnable task = new Runnable() {
@@ -141,6 +155,7 @@ public class AudioSegmentRecord {
                 values.put(FieldName, mName);
                 values.put(FieldStartFrom, mStartFromInByte);
                 values.put(FieldEndTo, mEndToInByte);
+                values.put(FieldVolume, mVolume);
                 mRowId = db.insert(TableName, null, values);
                 db.close();
             }
@@ -159,6 +174,7 @@ public class AudioSegmentRecord {
                 values.put(FieldName, mName);
                 values.put(FieldStartFrom, mStartFromInByte);
                 values.put(FieldEndTo, mEndToInByte);
+                values.put(FieldVolume, mVolume);
                 db.update(TableName, values,
                         String.format("%s = ?", FieldRowId),
                         new String[] {String.valueOf(mRowId)}
@@ -207,7 +223,7 @@ public class AudioSegmentRecord {
                 ArrayList<AudioSegmentRecord> recordList = new ArrayList<AudioSegmentRecord>();
 
                 DbHelper dbHelper = new DbHelper(AppOverload.getContext());
-                SQLiteDatabase db = dbHelper.getReadableDatabase();
+                SQLiteDatabase db = dbHelper.getWritableDatabase();
 
                 if(db != null) {
                     Cursor cursor = db.query(TableName, Columns, null, null, null, null, null);
