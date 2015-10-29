@@ -10,7 +10,6 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -34,6 +33,8 @@ import java.util.concurrent.TimeUnit;
  * Created by sujoy on 14/9/15.
  */
 public class Player implements Runnable {
+    public static float sVolume = 1;
+    public static float sTempo = 1;
     public static final int TrackBufferMultiplier = 2;
     private static ExecutorService sGraphExecutor = Executors.newFixedThreadPool(1);
 
@@ -50,6 +51,7 @@ public class Player implements Runnable {
     private long mCurrentPositionInByte;
 
     private ArrayList<PlayerListener> mPlayerListeners;
+    private ArrayList<OnRegionChangeListener> mOnRegionChangeListeners;
     private Handler mHandler;
 
     private ScheduledExecutorService mAudioWriterExecutor;
@@ -59,7 +61,8 @@ public class Player implements Runnable {
     private long mStartFromInByte;
     private long mEndToInByte;
 
-    private float mVolume = 1F;
+    private float mVolume = 1;
+    private float mTempo = 1f;
 
     private AudioSegmentRecord mSegmentRecord;
 
@@ -73,7 +76,7 @@ public class Player implements Runnable {
         );
         mTrackBufferSize = minBufferSize * TrackBufferMultiplier;
         if (mTrackBufferSize%2 == 1) mTrackBufferSize += 1;
-        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*0.25F*1000F/(float) Recorder.getSampleRateInHz());
+        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*.25*1000F/(float) Recorder.getSampleRateInHz());
         //Log.d("LOGA", String.format("mPlayPeriodInMilli=%d", mPlayPeriodInMilli));
         try {
             mAudioTrack = new AudioTrack(
@@ -97,6 +100,7 @@ public class Player implements Runnable {
             mVolume = mSegmentRecord.getVolume();
         }
         mPlayerListeners = new ArrayList<PlayerListener>();
+        mOnRegionChangeListeners = new ArrayList<>();
         mHandler = new Handler(Looper.getMainLooper());
         mAudioWriterExecutor = Executors.newScheduledThreadPool(1);
 
@@ -137,6 +141,15 @@ public class Player implements Runnable {
         mPlayerListeners.remove(listener);
     }
 
+    public void addOnRegionChangeListener(OnRegionChangeListener listener) {
+        mOnRegionChangeListeners.remove(listener);
+        mOnRegionChangeListeners.add(listener);
+    }
+
+    public void removeOnRegionListener(OnRegionChangeListener listener) {
+        mOnRegionChangeListeners.remove(listener);
+    }
+
     public void setDurationInByte(long durationInByte) {
         if(mSegmentRecord == null) {
             mDurationInByte = durationInByte;
@@ -145,6 +158,10 @@ public class Player implements Runnable {
 
     public long getDurationInByte() {
         return mDurationInByte;
+    }
+
+    public float getDurationInSeconds() {
+        return getDurationInByte() * 0.5F / (float) Recorder.getSampleRateInHz();
     }
 
     private void schedulePlaying() {
@@ -273,7 +290,7 @@ public class Player implements Runnable {
 
             short[] interleaved = new short[readCount];
             for(int i=0; i<readCount/2; i++) {
-                shorts[i] = (short) (mVolume*shorts[i]);
+                shorts[i] = (short) (sVolume*mVolume*shorts[i]);
                 interleaved[i*2] = shorts[i];
                 interleaved[i*2+1] = shorts[i];
             }
@@ -308,6 +325,7 @@ public class Player implements Runnable {
         mAudioTrack.release();
         mAudioWriterExecutor.shutdownNow();
         mPlayerListeners.clear();
+        mOnRegionChangeListeners.clear();
     }
 
     public boolean checkIsPlaying() {
@@ -341,6 +359,9 @@ public class Player implements Runnable {
         mSegmentRecord.setEndToInByte((long) (right * mSegmentRecord.getLengthInByte()));
         if(save) mSegmentRecord.save();
         buildRegion();
+        for(OnRegionChangeListener listener: mOnRegionChangeListeners) {
+            listener.OnRegionChange(this);
+        }
     }
 
     public float getVolume() {
@@ -505,5 +526,9 @@ public class Player implements Runnable {
             } catch (IOException e) {
             }
         }
+    }
+
+    public static abstract class OnRegionChangeListener {
+        public abstract void OnRegionChange(Player player);
     }
 }

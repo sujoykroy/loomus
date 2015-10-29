@@ -17,7 +17,7 @@ import android.widget.TextView;
 /**
  * Created by sujoy on 14/9/15.
  */
-public class PlayerView extends FrameLayout {
+public class PlayerItemView extends FrameLayout {
     private static final String Zero = "0.0";
 
     private Player mPlayer = null;
@@ -25,18 +25,15 @@ public class PlayerView extends FrameLayout {
     private CheckBox mChkEnabled;
     private TextView mTxtDuration;
     private View mDeleteButton;
-    private AudioSegmentView mAudioSegmentView;
-    private RegionSliderView mRegionSliderView;
-    private VolumeSliderView mVolumeSliderView;
+    private PlayerEditorView mPlayerEditorView;
 
-    private ViewPlayerListener mPlayerListener;
     private Player mPlayHead;
     private PlayerListAdapter mPlayerListAdapter;
 
-    public PlayerView(Context context, PlayerListAdapter playerListAdapter) {
+    public PlayerItemView(Context context, PlayerListAdapter playerListAdapter) {
         super(context);
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View rootView = inflater.inflate(R.layout.player_view, this);
+        View rootView = inflater.inflate(R.layout.player_item_view, this);
 
         mPlayerListAdapter = playerListAdapter;
         mPlayHead = mPlayerListAdapter.getPlayHead();
@@ -52,51 +49,15 @@ public class PlayerView extends FrameLayout {
         mTxtDuration = (TextView) rootView.findViewById(R.id.txtDuration);
         mDeleteButton = rootView.findViewById(R.id.imbDeleteSegment);
         mDeleteButton.setVisibility(GONE);
-        mAudioSegmentView = (AudioSegmentView) rootView.findViewById(R.id.audioSegment);
-        mAudioSegmentView.setOnSegmentChangeListener(new AudioSegmentView.OnSegmentChangeListener() {
+        mPlayerEditorView = (PlayerEditorView) rootView.findViewById(R.id.playerEditor);
+        mPlayerEditorView.setOnRegionChangeListener(new PlayerEditorView.OnRegionChangeListener() {
             @Override
-            public void onRegionChange(float left, float right, boolean ongoing) {
-                if (mPlayer == null) return;
-                mPlayer.setRegion(left, right, !ongoing);
-                mRegionSliderView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
+            public void onRegionChange() {
                 showDuration();
 
-                if (!ongoing) {
-                    if (mPlayHead.getDurationInByte() < mPlayer.getDurationInByte()) {
-                        mPlayHead.setDurationInByte(mPlayer.getDurationInByte());
-                    }
-                }
-            }
-
-            @Override
-            public void onHeadChange(float head) {
-                if (mPlayer == null) return;
-                mPlayer.setHead(head);
             }
         });
-        mRegionSliderView = (RegionSliderView) rootView.findViewById(R.id.regionSlider);
-        mRegionSliderView.setOnRegionChangeListener(new RegionSliderView.OnRegionChangeListener() {
-            @Override
-            public void onRegionChange(float left, float right, boolean ongoing) {
-                if (mPlayer == null) return;
-                mPlayer.setRegion(left, right, !ongoing);
-                mAudioSegmentView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
-                showDuration();
-
-                if (!ongoing) {
-                    if (mPlayHead.getDurationInByte() < mPlayer.getDurationInByte()) {
-                        mPlayHead.setDurationInByte(mPlayer.getDurationInByte());
-                    }
-                }
-            }
-        });
-        mVolumeSliderView = (VolumeSliderView) rootView.findViewById(R.id.volumeSlider);
-        mVolumeSliderView.setOnVolumeChangeListener(new VolumeSliderView.OnVolumeChangeListener() {
-            @Override
-            public void onVolumeChange(float volume, boolean ongoing) {
-                mPlayer.setVolume(volume, !ongoing);
-            }
-        });
+        mPlayerEditorView.hideExtra();
 
         mChkEnabled = (CheckBox) rootView.findViewById(R.id.chkOn);
         mChkEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -113,7 +74,6 @@ public class PlayerView extends FrameLayout {
                 }
             }
         });
-        mPlayerListener = new ViewPlayerListener();
 
         mDeleteButton.setOnClickListener(new OnClickListener() {
             @Override
@@ -174,20 +134,15 @@ public class PlayerView extends FrameLayout {
     }
 
     public void setPlayer(Player player) {
-        if(mPlayer != null) mPlayer.removePlayerListener(mPlayerListener);
         mPlayer = player;
-        mPlayer.addPlayerListener(mPlayerListener);
-
         showName();
         showDuration();
-        mVolumeSliderView.setValue(mPlayer.getVolume());
-        mAudioSegmentView.setHead(mPlayer.getHead());
-        mRegionSliderView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
-        mAudioSegmentView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
-
+        mPlayerEditorView.setPlayer(mPlayer);
         mChkEnabled.setChecked(mPlayer.checkIsEnabled());
+    }
 
-        mPlayer.loadGraphBitmap();
+    public Player getPlayer() {
+        return mPlayer;
     }
 
     private void showName() {
@@ -195,35 +150,6 @@ public class PlayerView extends FrameLayout {
     }
 
     private void showDuration() {
-        mTxtDuration.setText(String.format("%.2f",
-                        mPlayer.getDurationInByte() * 0.5F / (float) Recorder.getSampleRateInHz())
-        );
-    }
-
-    private class ViewPlayerListener extends PlayerListener {
-
-        @Override
-        public void onError(String message) {
-            Log.d("LOGA", message);
-        }
-
-        @Override
-        public void onPlay() {}
-
-        @Override
-        public void onPause() {}
-
-        @Override
-        public void onSeek() {}
-
-        @Override
-        public void onProgress(float head) {
-            mAudioSegmentView.setHead(head);
-        }
-
-        @Override
-        public void onGraphLoad(Bitmap graphBitmap) {
-            mAudioSegmentView.setBackgroundBitmap(graphBitmap);
-        }
+        mTxtDuration.setText(String.format("%.2f", mPlayer.getDurationInSeconds()));
     }
 }

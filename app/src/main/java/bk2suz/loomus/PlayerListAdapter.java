@@ -2,10 +2,8 @@ package bk2suz.loomus;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 
 import java.io.File;
@@ -19,8 +17,11 @@ public class PlayerListAdapter extends BaseAdapter {
     private ArrayList<Player> mPlayers;
 
     private Player mPlayHead;
+    private PlayerRegionChangeListener mPlayerRegionChangeListener;
+    private View.OnLongClickListener mOnLongClickListener;
 
-    public PlayerListAdapter(Context context, ArrayList<AudioSegmentRecord> recordList) {
+    public PlayerListAdapter(Context context, ArrayList<AudioSegmentRecord> recordList,
+                             View.OnLongClickListener onLongClickListener) {
         try {
             mPlayHead = new Player(null);
         } catch (Exception e) {
@@ -28,6 +29,9 @@ public class PlayerListAdapter extends BaseAdapter {
         }
         mPlayHead.setIsEnabled(true);
         mPlayHead.addPlayerListener(new PlayHeadPlayerListener());
+
+        mOnLongClickListener = onLongClickListener;
+        mPlayerRegionChangeListener  = new PlayerRegionChangeListener();
 
         mPlayers = new ArrayList<Player>();
         for(AudioSegmentRecord record: recordList) {
@@ -37,10 +41,9 @@ public class PlayerListAdapter extends BaseAdapter {
             } catch (Exception e) {
                 continue;
             }
-            if(mPlayHead.getDurationInByte()<player.getDurationInByte()) {
-                mPlayHead.setDurationInByte(player.getDurationInByte());
-            }
+            mPlayerRegionChangeListener.OnRegionChange(player);
             mPlayers.add(player);
+            player.addOnRegionChangeListener(mPlayerRegionChangeListener);
         }
         mContext = context;
     }
@@ -55,7 +58,9 @@ public class PlayerListAdapter extends BaseAdapter {
         if(mPlayHead.getDurationInByte()<player.getDurationInByte()) {
             mPlayHead.setDurationInByte(player.getDurationInByte());
         }
+        mPlayerRegionChangeListener.OnRegionChange(player);
         mPlayers.add(player);
+        player.addOnRegionChangeListener(mPlayerRegionChangeListener);
         notifyDataSetChanged();
     }
 
@@ -91,16 +96,18 @@ public class PlayerListAdapter extends BaseAdapter {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        PlayerView playerView;
+        PlayerItemView playerItemView;
         if(convertView == null) {
-            playerView = new PlayerView(mContext, this);
+            playerItemView = new PlayerItemView(mContext, this);
+            playerItemView.setLongClickable(true);
+            playerItemView.setOnLongClickListener(mOnLongClickListener);
 
         } else {
-            playerView = (PlayerView) convertView;
+            playerItemView = (PlayerItemView) convertView;
         }
-        playerView.setPlayer(getItem(position));
-        playerView.showHideDeleteButton();
-        return playerView;
+        playerItemView.setPlayer(getItem(position));
+        playerItemView.showHideDeleteButton();
+        return playerItemView;
     }
 
     public void clear() {
@@ -149,5 +156,14 @@ public class PlayerListAdapter extends BaseAdapter {
 
         @Override
         public void onGraphLoad(Bitmap graphBitmap) {}
+    }
+
+    private class PlayerRegionChangeListener extends Player.OnRegionChangeListener {
+        @Override
+        public void OnRegionChange(Player player) {
+            if (mPlayHead.getDurationInByte() < player.getDurationInByte()) {
+                mPlayHead.setDurationInByte(player.getDurationInByte());
+            }
+        }
     }
 }

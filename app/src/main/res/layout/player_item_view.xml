@@ -32,37 +32,13 @@
         android:gravity="center_vertical"
         android:layout_weight="1" />
 
-    <LinearLayout
-        android:orientation="vertical"
+    <bk2suz.loomus.PlayerEditorView
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:padding="3dp"
-        android:layout_weight="4">
-
-        <bk2suz.loomus.VolumeSliderView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:id="@+id/volumeSlider"
-            android:visibility="visible"
-            android:layout_marginBottom="1dp">
-        </bk2suz.loomus.VolumeSliderView>
-        <bk2suz.loomus.AudioSegmentView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="2"
-            android:id="@+id/audioSegment"
-            android:visibility="visible">
-        </bk2suz.loomus.AudioSegmentView>
-        <bk2suz.loomus.RegionSliderView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:id="@+id/regionSlider"
-            android:visibility="visible">
-        </bk2suz.loomus.RegionSliderView>
-
-    </LinearLayout>
+        android:layout_weight="4"
+        android:id="@+id/playerEditor">
+    </bk2suz.loomus.PlayerEditorView>
 
     <ImageButton
         android:layout_width="20dp"

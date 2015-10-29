@@ -37,6 +37,7 @@ public class MainActivity extends ActionBarActivity {
     private RecorderListener mRecorderListener;
 
     private PlayerListAdapter mPlayerListAdapter;
+    private PlayerEditorView mPlayerEditorView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -152,6 +153,15 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
+        mPlayerEditorView = (PlayerEditorView) findViewById(R.id.playerEditor);
+        mPlayerEditorView.setOnCloseListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mPlayerEditorView.setPlayer(null);
+                mPlayerEditorView.setVisibility(View.GONE);
+            }
+        });
+
         AudioSegmentRecord.getRecords(new OnLoadListener<ArrayList<AudioSegmentRecord>>() {
             @Override
             public void onLoad(ArrayList<AudioSegmentRecord> recordList) {
@@ -161,7 +171,17 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void loadAudioSegments(ArrayList<AudioSegmentRecord> recordList) {
-        mPlayerListAdapter = new PlayerListAdapter(this, recordList);
+        mPlayerListAdapter = new PlayerListAdapter(this, recordList, new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Player player = ((PlayerItemView) v).getPlayer();
+                if(player != null) {
+                    mPlayerEditorView.setPlayer(player);
+                    mPlayerEditorView.setVisibility(View.VISIBLE);
+                }
+                return false;
+            }
+        });
         ListView playerListView = (ListView) findViewById(R.id.playerListView);
         playerListView.setAdapter(mPlayerListAdapter);
 

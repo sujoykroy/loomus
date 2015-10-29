@@ -103,7 +103,7 @@ public class AudioSegmentView extends View {
         }
         canvas.drawRoundRect(new RectF(
                 0, 0,
-                mWidth * mHeadPosition, mHeight), 3, 3, sPlayHeadPaint);
+                mWidth * mLeftPosition + mWidth * (mRightPosition-mLeftPosition) * mHeadPosition, mHeight), 3, 3, sPlayHeadPaint);
         if(mLeftPosition>0) {
             canvas.drawRoundRect(new RectF(
                     0, 0,
