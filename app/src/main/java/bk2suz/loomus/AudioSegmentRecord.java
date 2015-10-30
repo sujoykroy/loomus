@@ -18,16 +18,17 @@ import java.util.concurrent.Executors;
  */
 public class AudioSegmentRecord {
     private static final String DbName = "audioSegment";
-    private static final int DbVersion = 3;
+    private static final int DbVersion = 4;
 
     private static final String TableName = "segment";
 
     private static final String FieldRowId = "rowid";
-    private static final String FieldFileName = "filename";
+    public static final String FieldFileName = "filename";
     private static final String FieldName = "name";
     private static final String FieldStartFrom = "startFrom";
     private static final String FieldEndTo = "endTo";
     private static final String FieldVolume = "volume";
+    private static final String FieldTempo = "tempo";
 
     private static final String SqlCreateSchema = "" +
             "CREATE TABLE IF NOT EXISTS " + TableName + " (" +
@@ -35,7 +36,8 @@ public class AudioSegmentRecord {
             FieldName + " TEXT NOT NULL," +
             FieldStartFrom + " INT NOT NULL," +
             FieldEndTo + " INT NOT NULL," +
-            FieldVolume + " REAL NOT NULL" +
+            FieldVolume + " REAL NOT NULL," +
+            FieldTempo + " REAL NOT NULL" +
             ")";
     private static final String SqlDropSchema = "DROP TABLE IF EXISTS " + TableName;
 
@@ -66,8 +68,10 @@ public class AudioSegmentRecord {
     private long mEndToInByte;
     private long mLengthInByte;
     private float mVolume;
+    private float mTempo;
 
-    private static String[] Columns = { FieldRowId, FieldName, FieldFileName, FieldStartFrom, FieldEndTo, FieldVolume };
+    private static String[] Columns = { FieldRowId, FieldName, FieldFileName, FieldStartFrom,
+                                        FieldEndTo, FieldVolume, FieldTempo };
 
     public AudioSegmentRecord(Cursor cursor) {
         mRowId = cursor.getLong(0);
@@ -76,6 +80,7 @@ public class AudioSegmentRecord {
         mStartFromInByte = cursor.getLong(3);
         mEndToInByte = cursor.getLong(4);
         mVolume = cursor.getFloat(5);
+        mTempo = cursor.getFloat(6);
 
         File file = AppOverload.getPermaAudioFile(mFileName);
         mLengthInByte = file.length();
@@ -88,7 +93,7 @@ public class AudioSegmentRecord {
         mEndToInByte = file.length();
         mLengthInByte = file.length();
         mVolume = 0.25F;
-
+        mTempo = .75f;
         add();
     }
 
@@ -142,6 +147,14 @@ public class AudioSegmentRecord {
         else if(mVolume>1F) mVolume = 1F;
     }
 
+    public float getTempo() {
+        return mTempo;
+    }
+
+    public void setTempo(float tempo) {
+        mTempo = tempo;
+    }
+
     private void add() {
         if (mRowId != -1) return;
         Runnable task = new Runnable() {
@@ -156,6 +169,7 @@ public class AudioSegmentRecord {
                 values.put(FieldStartFrom, mStartFromInByte);
                 values.put(FieldEndTo, mEndToInByte);
                 values.put(FieldVolume, mVolume);
+                values.put(FieldTempo, mTempo);
                 mRowId = db.insert(TableName, null, values);
                 db.close();
             }
@@ -175,6 +189,7 @@ public class AudioSegmentRecord {
                 values.put(FieldStartFrom, mStartFromInByte);
                 values.put(FieldEndTo, mEndToInByte);
                 values.put(FieldVolume, mVolume);
+                values.put(FieldTempo, mTempo);
                 db.update(TableName, values,
                         String.format("%s = ?", FieldRowId),
                         new String[] {String.valueOf(mRowId)}
@@ -232,6 +247,15 @@ public class AudioSegmentRecord {
                         recordList.add(record);
                     }
                     db.close();
+                }
+                if(recordList.size() == 0) {
+                    File[] files = AppOverload.getPermaDir().listFiles();
+                    if(files != null) {
+                        for(File file: files) {
+                            AudioSegmentRecord record= new AudioSegmentRecord(file);
+                            recordList.add(record);
+                        }
+                    }
                 }
                 sHandler.post(getOnRecordListLoadRunnable(recordList, listener));
             }

@@ -67,27 +67,12 @@ public class Player implements Runnable {
     private AudioSegmentRecord mSegmentRecord;
 
     public Player(AudioSegmentRecord segmentRecord) throws Exception {
+        this(segmentRecord, true);
+    }
+
+    public Player(AudioSegmentRecord segmentRecord, boolean withTrack) throws Exception {
         Recorder.configure();
 
-        int minBufferSize= mAudioTrack.getMinBufferSize(
-                Recorder.getSampleRateInHz(),
-                AudioFormat.CHANNEL_IN_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT
-        );
-        mTrackBufferSize = minBufferSize * TrackBufferMultiplier;
-        if (mTrackBufferSize%2 == 1) mTrackBufferSize += 1;
-        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*.25*1000F/(float) Recorder.getSampleRateInHz());
-        //Log.d("LOGA", String.format("mPlayPeriodInMilli=%d", mPlayPeriodInMilli));
-        try {
-            mAudioTrack = new AudioTrack(
-                    AudioManager.STREAM_MUSIC, Recorder.getSampleRateInHz(),
-                    AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT,
-                    mTrackBufferSize,
-                    AudioTrack.MODE_STREAM);
-        } catch (IllegalArgumentException e) {
-            throw new Exception("Bad "  +e.getMessage());
-        }
-        /*mAudioTrack.setStereoVolume(AudioTrack.getMaxVolume()*VolumeGain, AudioTrack.getMaxVolume()*VolumeGain);*/
         mSegmentRecord = segmentRecord;
         if(mSegmentRecord != null) {
             try {
@@ -98,11 +83,16 @@ public class Player implements Runnable {
             mInputStream.mark((int)mSegmentRecord.getLengthInByte() + 1);
             buildRegion();
             mVolume = mSegmentRecord.getVolume();
+            mTempo = mSegmentRecord.getTempo();
         }
+        if(withTrack) createTrack();
+
         mPlayerListeners = new ArrayList<PlayerListener>();
         mOnRegionChangeListeners = new ArrayList<>();
         mHandler = new Handler(Looper.getMainLooper());
-        mAudioWriterExecutor = Executors.newScheduledThreadPool(1);
+        if(withTrack) {
+            mAudioWriterExecutor = Executors.newScheduledThreadPool(1);
+        }
 
         mIsPlaying = false;
         mCurrentPositionInByte = 0;
@@ -118,6 +108,32 @@ public class Player implements Runnable {
         };
 
         mIsEnabled = false;
+    }
+
+    private void createTrack() throws Exception {
+        float sampleRate = Recorder.getSampleRateInHz() * mTempo;
+        int minBufferSize= AudioTrack.getMinBufferSize(
+                (int) sampleRate,
+                AudioFormat.CHANNEL_IN_STEREO,
+                AudioFormat.ENCODING_PCM_16BIT
+        );
+        int trackBufferSize = minBufferSize * TrackBufferMultiplier;
+        if (trackBufferSize%2 == 1) trackBufferSize += 1;
+        AudioTrack audioTrack = null;
+        try {
+            audioTrack = new AudioTrack(
+                    AudioManager.STREAM_MUSIC, (int) sampleRate,
+                    AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT,
+                    trackBufferSize,
+                    AudioTrack.MODE_STREAM);
+        } catch (IllegalArgumentException e) {
+            throw new Exception("Bad "  +e.getMessage());
+        }
+
+        if(mAudioTrack != null) mAudioTrack.release();
+        mAudioTrack = audioTrack;
+        mTrackBufferSize = trackBufferSize;
+        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*.25*1000F/sampleRate);
     }
 
     public AudioSegmentRecord getAudioSegmentRecord() {
@@ -161,7 +177,11 @@ public class Player implements Runnable {
     }
 
     public float getDurationInSeconds() {
-        return getDurationInByte() * 0.5F / (float) Recorder.getSampleRateInHz();
+        return getTemoCorrectedDurationInByte() * 0.5F / (float) Recorder.getSampleRateInHz();
+    }
+
+    public long getTemoCorrectedDurationInByte() {
+        return (long) (mDurationInByte/mTempo);
     }
 
     private void schedulePlaying() {
@@ -248,7 +268,7 @@ public class Player implements Runnable {
                     mHandler.post(getOnErrorRunnable(e.getMessage()));
                     return;
                 }
-                mCurrentPositionInByte =  byteCount%mDurationInByte;
+                mCurrentPositionInByte =  ((long)(byteCount*mTempo))%mDurationInByte;
                 if(mCurrentPositionInByte%2 ==1) mCurrentPositionInByte+=1;
                 try {
                     mInputStream.skip(mStartFromInByte + mCurrentPositionInByte);
@@ -322,8 +342,8 @@ public class Player implements Runnable {
     }
 
     public void cleanIt() {
-        mAudioTrack.release();
-        mAudioWriterExecutor.shutdownNow();
+        if(mAudioTrack != null) mAudioTrack.release();
+        if(mAudioWriterExecutor != null) mAudioWriterExecutor.shutdownNow();
         mPlayerListeners.clear();
         mOnRegionChangeListeners.clear();
     }
@@ -368,11 +388,34 @@ public class Player implements Runnable {
         return mSegmentRecord.getVolume();
     }
 
-
     public void setVolume(float volume, boolean save) {
         mSegmentRecord.setVolume(volume);
         mVolume = mSegmentRecord.getVolume();
         if(save) mSegmentRecord.save();
+    }
+
+    public float getTempo() {
+        return mSegmentRecord.getTempo();
+    }
+
+    public void setTempo(float tempo, boolean save) {
+        if (tempo<=0) return;
+        mTempo = tempo;
+        mSegmentRecord.setTempo(tempo);
+        if(save) mSegmentRecord.save();
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                if(!mIsEnabled) return;
+                try {
+                    createTrack();
+                } catch (Exception e) {}
+                if(mIsPlaying) {
+                    mAudioTrack.play();
+                }
+            }
+        };
+        mAudioWriterExecutor.schedule(task, 0, TimeUnit.SECONDS);
     }
 
     private void buildRegion() {

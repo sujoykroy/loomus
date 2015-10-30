@@ -161,8 +161,8 @@ public class PlayerListAdapter extends BaseAdapter {
     private class PlayerRegionChangeListener extends Player.OnRegionChangeListener {
         @Override
         public void OnRegionChange(Player player) {
-            if (mPlayHead.getDurationInByte() < player.getDurationInByte()) {
-                mPlayHead.setDurationInByte(player.getDurationInByte());
+            if (mPlayHead.getDurationInByte() < player.getTemoCorrectedDurationInByte()) {
+                mPlayHead.setDurationInByte(player.getTemoCorrectedDurationInByte());
             }
         }
     }

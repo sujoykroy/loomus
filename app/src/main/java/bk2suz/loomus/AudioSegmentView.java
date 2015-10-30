@@ -35,6 +35,7 @@ public class AudioSegmentView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if(mOnSegmentChangeListener == null) return false;
         switch(event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 float x = event.getX();

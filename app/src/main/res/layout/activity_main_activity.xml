@@ -115,6 +115,13 @@
             android:id="@+id/imbResetPlaying"
             android:src="@android:drawable/ic_menu_revert" />
 
+        <ImageButton
+            style="@style/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imbPatternMaker"
+            android:src="@android:drawable/ic_dialog_dialer" />
+
     </LinearLayout>
 
 </LinearLayout>

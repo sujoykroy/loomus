@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app = "http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical">
 
@@ -47,14 +48,14 @@
         </LinearLayout>
     </RelativeLayout>
 
-    <bk2suz.loomus.VolumeSliderView
+    <bk2suz.loomus.SliderView
         android:id="@+id/volumeSlider"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginBottom="1dp"
         android:layout_weight="1"
         android:visibility="visible">
-    </bk2suz.loomus.VolumeSliderView>
+    </bk2suz.loomus.SliderView>
     <bk2suz.loomus.AudioSegmentView
         android:id="@+id/audioSegment"
         android:layout_width="match_parent"
@@ -69,5 +70,17 @@
         android:layout_weight="1"
         android:visibility="visible">
     </bk2suz.loomus.RegionSliderView>
+    <bk2suz.loomus.SliderView
+        android:id="@+id/tempoSlider"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="1dp"
+        android:layout_weight="1"
+        android:visibility="visible"
+        app:spanColor="#000000"
+        app:indicatorColor="#ffffff"
+        app:minValue=".1"
+        app:maxValue="4">
+    </bk2suz.loomus.SliderView>
 
 </LinearLayout>

@@ -22,7 +22,8 @@ public class PlayerEditorView extends FrameLayout {
     private TextView mTxtName;
     private AudioSegmentView mAudioSegmentView;
     private RegionSliderView mRegionSliderView;
-    private VolumeSliderView mVolumeSliderView;
+    private SliderView mVolumeSliderView;
+    private SliderView mTempoSliderView;
 
     private EditorPlayerListener  mEditorPlayerListener;
     private OnRegionChangeListener mOnRegionChangeListener;
@@ -50,17 +51,20 @@ public class PlayerEditorView extends FrameLayout {
         mTxtName = (TextView) rootView.findViewById(R.id.txtName);
         mAudioSegmentView = (AudioSegmentView) rootView.findViewById(R.id.audioSegment);
         mRegionSliderView = (RegionSliderView) rootView.findViewById(R.id.regionSlider);
-        mVolumeSliderView = (VolumeSliderView) rootView.findViewById(R.id.volumeSlider);
+        mVolumeSliderView = (SliderView) rootView.findViewById(R.id.volumeSlider);
+        mTempoSliderView = (SliderView) rootView.findViewById(R.id.tempoSlider);
 
         mAudioSegmentView.setOnSegmentChangeListener(new AudioSegmentListener());
         mRegionSliderView.setOnRegionChangeListener(new RegionSliderListener());
-        mVolumeSliderView.setOnVolumeChangeListener(new VolumeSliderListener());
+        mVolumeSliderView.setOnChangeListener(new VolumeSliderListener());
+        mTempoSliderView.setOnChangeListener(new TempoSliderListener());
 
         mEditorPlayerListener = new EditorPlayerListener();
     }
 
     public void hideExtra() {
         mLayoutHead.setVisibility(GONE);
+        mTempoSliderView.setVisibility(GONE);
     }
 
     public void setOnRegionChangeListener(OnRegionChangeListener listener) {
@@ -82,6 +86,7 @@ public class PlayerEditorView extends FrameLayout {
         mTxtName.setText(nameLabel);
 
         mVolumeSliderView.setValue(mPlayer.getVolume());
+        mTempoSliderView.setValue(mPlayer.getTempo());
         mAudioSegmentView.setHead(mPlayer.getHead());
         mRegionSliderView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
         mAudioSegmentView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
@@ -94,11 +99,20 @@ public class PlayerEditorView extends FrameLayout {
         mTxtDuration.setText(String.format("%.2f", mPlayer.getDurationInSeconds()));
     }
 
-    private class VolumeSliderListener extends VolumeSliderView.OnVolumeChangeListener {
+    private class TempoSliderListener extends SliderView.OnChangeListener {
         @Override
-        public void onVolumeChange(float volume, boolean ongoing) {
+        public void onChange(float value, boolean ongoing) {
             if (mPlayer == null) return;
-            mPlayer.setVolume(volume, !ongoing);
+            mPlayer.setTempo(value, !ongoing);
+            showDuration();
+        }
+    }
+
+    private class VolumeSliderListener extends SliderView.OnChangeListener {
+        @Override
+        public void onChange(float value, boolean ongoing) {
+            if (mPlayer == null) return;
+            mPlayer.setVolume(value, !ongoing);
         }
     }
 

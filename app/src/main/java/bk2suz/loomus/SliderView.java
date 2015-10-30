@@ -1,6 +1,7 @@
 package bk2suz.loomus;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -13,11 +14,9 @@ import android.view.View;
 /**
  * Created by sujoy on 20/9/15.
  */
-public class VolumeSliderView extends View   {
+public class SliderView extends View   {
     private static float BoxSizeFraction = 0.1F;
     private static Paint sBoxBorderPaint = new Paint();
-    private static Paint sBoxFillPaint = new Paint();
-    private static Paint sSlopeFillPaint = new Paint();
 
 
     static {
@@ -25,20 +24,17 @@ public class VolumeSliderView extends View   {
         sBoxBorderPaint.setColor(Color.parseColor("#55000000"));
         sBoxBorderPaint.setStrokeWidth(2);
         sBoxBorderPaint.setAntiAlias(true);
-
-        sBoxFillPaint.setStyle(Paint.Style.FILL);
-        sBoxFillPaint.setColor(Color.parseColor("#55ffffff"));
-
-        sSlopeFillPaint.setStyle(Paint.Style.FILL);
-        sSlopeFillPaint.setDither(true);
-        sSlopeFillPaint.setAntiAlias(true);
-        sSlopeFillPaint.setColor(Color.parseColor("#a7ad17"));
     }
 
+    private Paint mBoxFillPaint = new Paint();
+    private Paint mSlopeFillPaint = new Paint();
+
+    private float mMinValue = 0;
+    private float mMaxValue = 1;
     private float mValue = 0.5F;
     private float mWidth, mHeight;
     private RectF mBox = new RectF();
-    private OnVolumeChangeListener mOnVolumeChangeListener;
+    private OnChangeListener mOnChangeListener;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -49,11 +45,11 @@ public class VolumeSliderView extends View   {
                 if(mValue<0) mValue = 0F;
                 else if (mValue>1F) mValue=1F;
                 buildBox();
-                if(mOnVolumeChangeListener != null) mOnVolumeChangeListener.onVolumeChange(mValue, true);
+                if(mOnChangeListener != null) mOnChangeListener.onChange(mValue, true);
                 invalidate();
                 break;
             case MotionEvent.ACTION_UP:
-                if(mOnVolumeChangeListener != null) mOnVolumeChangeListener.onVolumeChange(mValue, false);
+                if(mOnChangeListener != null) mOnChangeListener.onChange(mValue, false);
                 break;
         }
         return true;
@@ -67,8 +63,8 @@ public class VolumeSliderView extends View   {
         slopePath.lineTo(mWidth,mBox.bottom);
         slopePath.close();
 
-        canvas.drawPath(slopePath, sSlopeFillPaint);
-        canvas.drawRoundRect(mBox, 5, 5, sBoxFillPaint);
+        canvas.drawPath(slopePath, mSlopeFillPaint);
+        canvas.drawRoundRect(mBox, 5, 5, mBoxFillPaint);
         canvas.drawRoundRect(mBox, 5, 5, sBoxBorderPaint);
     }
 
@@ -87,43 +83,60 @@ public class VolumeSliderView extends View   {
         mBox.bottom = mHeight-sBoxBorderPaint.getStrokeWidth();
     }
 
-    public void setOnVolumeChangeListener(OnVolumeChangeListener onVolumeChangeListener) {
-        mOnVolumeChangeListener = onVolumeChangeListener;
+    public void setOnChangeListener(OnChangeListener onChangeListener) {
+        mOnChangeListener = onChangeListener;
     }
 
     public void setValue(float value) {
         mValue = value;
-        if(mValue<0) mValue = 0F;
-        else if(mValue>1F) mValue = 1F;
+        if(mValue<mMinValue) mValue = mMinValue;
+        else if(mValue>mMaxValue) mValue = mMaxValue;
         buildBox();
         invalidate();
     }
 
-    private void doInit(Context context) {
+    private void doInit(Context context, AttributeSet attrs) {
+        int indicatorColor = Color.parseColor("#55ffffff");
+        int spanColor = Color.parseColor("#a7ad17");
+        if(attrs != null) {
+            TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.SliderView);
+            indicatorColor = a.getColor(R.styleable.SliderView_indicatorColor, indicatorColor);
+            spanColor = a.getColor(R.styleable.SliderView_spanColor, spanColor);
+            mMaxValue = a.getFloat(R.styleable.SliderView_maxValue, mMaxValue);
+            mMinValue = a.getFloat(R.styleable.SliderView_minValue, mMinValue);
+        }
+        mBoxFillPaint.setStyle(Paint.Style.FILL);
+        mBoxFillPaint.setColor((indicatorColor));
+
+        mSlopeFillPaint.setStyle(Paint.Style.FILL);
+        mSlopeFillPaint.setDither(true);
+        mSlopeFillPaint.setAntiAlias(true);
+        mSlopeFillPaint.setColor(spanColor);
+
         buildBox();
     }
 
-    public VolumeSliderView(Context context) {
+    public SliderView(Context context) {
         super(context);
-        doInit(context);
+        doInit(context, null);
     }
 
-    public VolumeSliderView(Context context, AttributeSet attrs) {
+    public SliderView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        doInit(context);
+        doInit(context, attrs);
     }
 
-    public VolumeSliderView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public SliderView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        doInit(context);
+        doInit(context, attrs);
     }
 
-    public VolumeSliderView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public SliderView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
-        doInit(context);
+        doInit(context, attrs);
     }
 
-    public static abstract class OnVolumeChangeListener {
-        public abstract void onVolumeChange (float volume, boolean ongoing);
+    public static abstract class OnChangeListener {
+        public abstract void onChange(float value, boolean ongoing);
     }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SliderView">
+        <attr name="spanColor" format="color"></attr>
+        <attr name="indicatorColor" format="color"></attr>
+        <attr name="minValue" format="float"></attr>
+        <attr name="maxValue" format="float"></attr>
+    </declare-styleable>
+</resources>

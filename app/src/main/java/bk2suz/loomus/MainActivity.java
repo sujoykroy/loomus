@@ -1,13 +1,13 @@
 package bk2suz.loomus;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -16,9 +16,10 @@ import java.io.File;
 import java.util.ArrayList;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity {
     private static final String Dash = "-";
     private static final String Zero = "0.0";
+    private static final int PATTERN_MAKER_REQUEST_CODE = 1;
 
     private TextView mTxtRecorderElapsedTime;
 
@@ -32,6 +33,7 @@ public class MainActivity extends ActionBarActivity {
     private View mPlayerListPauseButton;
     private View mPlayerListResetButton;
     private View mPlayerListDeleteToggleButton;
+    private View mPatternMakerButton;
 
     private Recorder mRecorder = null;
     private RecorderListener mRecorderListener;
@@ -115,6 +117,7 @@ public class MainActivity extends ActionBarActivity {
         mPlayerListPauseButton = findViewById(R.id.imbPausePlaying);
         mPlayerListResetButton = findViewById(R.id.imbResetPlaying);
         mPlayerListDeleteToggleButton = findViewById(R.id.imbDeleteToggle);
+        mPatternMakerButton = findViewById(R.id.imbPatternMaker);
 
         mPlayerListPlayButton.setVisibility(View.GONE);
         mPlayerListPauseButton.setVisibility(View.GONE);
@@ -153,12 +156,21 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
+        mPatternMakerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getBaseContext(), PatternMakerActivity.class);
+                startActivityForResult(intent, PATTERN_MAKER_REQUEST_CODE);
+            }
+        });
+
         mPlayerEditorView = (PlayerEditorView) findViewById(R.id.playerEditor);
         mPlayerEditorView.setOnCloseListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mPlayerEditorView.setPlayer(null);
                 mPlayerEditorView.setVisibility(View.GONE);
+                mPlayerListAdapter.notifyDataSetChanged();
             }
         });
 
@@ -168,6 +180,18 @@ public class MainActivity extends ActionBarActivity {
                 loadAudioSegments(recordList);
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode == PATTERN_MAKER_REQUEST_CODE && resultCode == RESULT_OK) {
+            String fileName =  data.getStringExtra(AudioSegmentRecord.FieldFileName);
+            if(fileName != null && !fileName.isEmpty()) {
+                mPlayerListAdapter.addNew(new File(fileName));
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
     }
 
     private void loadAudioSegments(ArrayList<AudioSegmentRecord> recordList) {

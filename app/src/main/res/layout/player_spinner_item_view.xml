@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app = "http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <bk2suz.loomus.AudioSegmentView
+        android:id="@+id/audioSegment"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:visibility="visible"
+        android:layout_centerVertical="true">
+    </bk2suz.loomus.AudioSegmentView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New Text"
+        android:id="@+id/txtName"
+        android:layout_centerInParent="true"
+        android:background="@drawable/button_unpressed"
+        android:visibility="visible" />
+
+</RelativeLayout>
