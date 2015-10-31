@@ -31,6 +31,7 @@ public class SliderView extends View   {
 
     private float mMinValue = 0;
     private float mMaxValue = 1;
+    private float mDiffValue = 1;
     private float mValue = 0.5F;
     private float mWidth, mHeight;
     private RectF mBox = new RectF();
@@ -41,9 +42,9 @@ public class SliderView extends View   {
         switch(event.getActionMasked()){
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
-                mValue = event.getX()/(mWidth-mBox.width());
-                if(mValue<0) mValue = 0F;
-                else if (mValue>1F) mValue=1F;
+                mValue = mMinValue +  mDiffValue*event.getX()/(mWidth-mBox.width());
+                if(mValue<mMinValue) mValue = mMinValue;
+                else if (mValue>mMaxValue) mValue=mMaxValue;
                 buildBox();
                 if(mOnChangeListener != null) mOnChangeListener.onChange(mValue, true);
                 invalidate();
@@ -77,7 +78,7 @@ public class SliderView extends View   {
     }
 
     private void buildBox() {
-        mBox.right = mWidth*(BoxSizeFraction + mValue*(1-BoxSizeFraction));
+        mBox.right = mWidth*(BoxSizeFraction + ((mValue-mMinValue)/mDiffValue)*(1-BoxSizeFraction));
         mBox.left = mBox.right - mWidth*BoxSizeFraction;
         mBox.top = 0;
         mBox.bottom = mHeight-sBoxBorderPaint.getStrokeWidth();
@@ -105,6 +106,7 @@ public class SliderView extends View   {
             mMaxValue = a.getFloat(R.styleable.SliderView_maxValue, mMaxValue);
             mMinValue = a.getFloat(R.styleable.SliderView_minValue, mMinValue);
         }
+        mDiffValue = mMaxValue - mMinValue;
         mBoxFillPaint.setStyle(Paint.Style.FILL);
         mBoxFillPaint.setColor((indicatorColor));
 

@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class Player implements Runnable {
     public static float sVolume = 1;
-    public static float sTempo = 1;
     public static final int TrackBufferMultiplier = 2;
     private static ExecutorService sGraphExecutor = Executors.newFixedThreadPool(1);
 
@@ -46,8 +45,7 @@ public class Player implements Runnable {
     private int mTrackBufferSize;
     private long mPlayPeriodInMilli;
 
-    private File mFile;
-    private InputStream mInputStream = null;
+    private SkipFixedInputStream mInputStream = null;
     private long mCurrentPositionInByte;
 
     private ArrayList<PlayerListener> mPlayerListeners;
@@ -75,17 +73,19 @@ public class Player implements Runnable {
 
         mSegmentRecord = segmentRecord;
         if(mSegmentRecord != null) {
-            try {
-                mInputStream = new BufferedInputStream(new FileInputStream(mSegmentRecord.getAudioFile()));
-            } catch (Exception e) {
-                throw new Exception("No input file");
+            if(withTrack) {
+                try {
+                    mInputStream = new SkipFixedInputStream(new FileInputStream(mSegmentRecord.getAudioFile()));
+                } catch (Exception e) {
+                    throw new Exception("No input file");
+                }
+                mInputStream.mark((int) mSegmentRecord.getLengthInByte() + 1);
             }
-            mInputStream.mark((int)mSegmentRecord.getLengthInByte() + 1);
             buildRegion();
             mVolume = mSegmentRecord.getVolume();
             mTempo = mSegmentRecord.getTempo();
         }
-        if(withTrack) createTrack();
+        if(withTrack) createTrack(mTempo);
 
         mPlayerListeners = new ArrayList<PlayerListener>();
         mOnRegionChangeListeners = new ArrayList<>();
@@ -110,8 +110,8 @@ public class Player implements Runnable {
         mIsEnabled = false;
     }
 
-    private void createTrack() throws Exception {
-        float sampleRate = Recorder.getSampleRateInHz() * mTempo;
+    private void createTrack(float tempo) throws Exception {
+        float sampleRate = Recorder.getSampleRateInHz() * tempo;
         int minBufferSize= AudioTrack.getMinBufferSize(
                 (int) sampleRate,
                 AudioFormat.CHANNEL_IN_STEREO,
@@ -271,7 +271,7 @@ public class Player implements Runnable {
                 mCurrentPositionInByte =  ((long)(byteCount*mTempo))%mDurationInByte;
                 if(mCurrentPositionInByte%2 ==1) mCurrentPositionInByte+=1;
                 try {
-                    mInputStream.skip(mStartFromInByte + mCurrentPositionInByte);
+                    mInputStream.skipSured(mStartFromInByte + mCurrentPositionInByte);
                 } catch (IOException e) {
                     mHandler.post(getOnErrorRunnable(e.getMessage()));
                     return;
@@ -322,13 +322,12 @@ public class Player implements Runnable {
             try {
                 mInputStream.reset();
                 mCurrentPositionInByte = 0;
-                mInputStream.skip(mStartFromInByte + mCurrentPositionInByte);
+                mInputStream.skipSured(mStartFromInByte + mCurrentPositionInByte);
             } catch (IOException e) {
                 return;
             }
         }
         long elapsedTime = new Date().getTime()-startTime;
-        //Log.d("LOGA", String.format("mCurrentPositionInByte=%d, mDurationInByte=%d", mCurrentPositionInByte, mDurationInByte));
         mAudioWriterExecutor.schedule(this, mPlayPeriodInMilli-elapsedTime, TimeUnit.MILLISECONDS);
     }
 
@@ -343,7 +342,15 @@ public class Player implements Runnable {
 
     public void cleanIt() {
         if(mAudioTrack != null) mAudioTrack.release();
+        mAudioTrack = null;
         if(mAudioWriterExecutor != null) mAudioWriterExecutor.shutdownNow();
+        mAudioWriterExecutor = null;
+        if(mInputStream != null) {
+            try {
+                mInputStream.close();
+            } catch (IOException e) {}
+        }
+        mInputStream = null;
         mPlayerListeners.clear();
         mOnRegionChangeListeners.clear();
     }
@@ -398,18 +405,23 @@ public class Player implements Runnable {
         return mSegmentRecord.getTempo();
     }
 
-    public void setTempo(float tempo, boolean save) {
+    public void setTempo(final float tempo, final boolean save) {
         if (tempo<=0) return;
-        mTempo = tempo;
-        mSegmentRecord.setTempo(tempo);
-        if(save) mSegmentRecord.save();
         Runnable task = new Runnable() {
             @Override
             public void run() {
                 if(!mIsEnabled) return;
+                boolean success = true;
                 try {
-                    createTrack();
-                } catch (Exception e) {}
+                    createTrack(tempo);
+                } catch (Exception e) {
+                    success = false;
+                }
+                if(success) {
+                    mTempo = tempo;
+                    mSegmentRecord.setTempo(tempo);
+                    if (save) mSegmentRecord.save();
+                }
                 if(mIsPlaying) {
                     mAudioTrack.play();
                 }
@@ -422,7 +434,6 @@ public class Player implements Runnable {
         mStartFromInByte = mSegmentRecord.getStartFromInByte();
         mEndToInByte = mSegmentRecord.getEndToInByte();
         mDurationInByte = mEndToInByte - mStartFromInByte;
-        //Log.d("LOGA", String.format("mStartFromInByte=%d, mEndToInByte=%d, length=%d", mStartFromInByte, mEndToInByte, mSegmentRecord.getAudioFile().length()));
     }
 
     public void toggleDeletable() {

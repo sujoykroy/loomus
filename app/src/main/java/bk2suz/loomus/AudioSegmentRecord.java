@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  */
 public class AudioSegmentRecord {
     private static final String DbName = "audioSegment";
-    private static final int DbVersion = 4;
+    private static final int DbVersion = 5;
 
     private static final String TableName = "segment";
 
@@ -93,7 +93,7 @@ public class AudioSegmentRecord {
         mEndToInByte = file.length();
         mLengthInByte = file.length();
         mVolume = 0.25F;
-        mTempo = .75f;
+        mTempo = 1;
         add();
     }
 

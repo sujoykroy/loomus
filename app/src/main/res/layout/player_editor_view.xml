@@ -80,7 +80,7 @@
         app:spanColor="#000000"
         app:indicatorColor="#ffffff"
         app:minValue=".1"
-        app:maxValue="4">
+        app:maxValue="1">
     </bk2suz.loomus.SliderView>
 
 </LinearLayout>
