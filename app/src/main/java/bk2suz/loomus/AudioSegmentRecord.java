@@ -144,7 +144,6 @@ public class AudioSegmentRecord {
     public void setVolume(float volume) {
         mVolume = volume;
         if(mVolume<0) mVolume = 0F;
-        else if(mVolume>1F) mVolume = 1F;
     }
 
     public float getTempo() {

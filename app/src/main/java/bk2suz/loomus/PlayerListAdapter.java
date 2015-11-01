@@ -64,6 +64,18 @@ public class PlayerListAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
+    public long getMaxDurationInByte() {
+        long maxDuration = 0;
+        for(Player player: mPlayers) {
+            if(!player.checkIsEnabled()) continue;
+            long playerDuration = player.getTemoCorrectedDurationInByte();
+            if(playerDuration>maxDuration) {
+                maxDuration = playerDuration;
+            }
+        }
+        return maxDuration;
+    }
+
     public void play() {
         mPlayHead.play();
         for(Player player: mPlayers) player.play();

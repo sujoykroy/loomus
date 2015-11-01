@@ -54,6 +54,7 @@
         android:layout_height="0dp"
         android:layout_marginBottom="1dp"
         android:layout_weight="1"
+        app:maxValue="3"
         android:visibility="visible">
     </bk2suz.loomus.SliderView>
     <bk2suz.loomus.AudioSegmentView

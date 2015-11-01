@@ -122,6 +122,29 @@
             android:id="@+id/imbPatternMaker"
             android:src="@android:drawable/ic_dialog_dialer" />
 
+        <ImageButton
+            style="@style/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imbMerge"
+            android:src="@android:drawable/ic_menu_crop"
+            android:layout_gravity="center" />
+
+        <ImageButton
+            style="@style/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imbExport"
+            android:src="@android:drawable/ic_menu_save"
+            android:layout_gravity="center" />
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/pgrProcessing"
+            android:layout_centerInParent="true"
+            android:indeterminate="true" />
+
     </LinearLayout>
 
 </LinearLayout>

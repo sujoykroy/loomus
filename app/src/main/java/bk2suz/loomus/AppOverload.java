@@ -2,6 +2,7 @@ package bk2suz.loomus;
 
 import android.app.Application;
 import android.content.Context;
+import android.os.Environment;
 
 import java.io.File;
 import java.util.Date;
@@ -39,6 +40,12 @@ public class AppOverload extends Application {
 
     public static File getPermaDir() {
         return sApplication.getDir(PermaAudioFolderName, MODE_PRIVATE);
+    }
+
+    public static File getExportAudioFile() {
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_MUSIC), String.valueOf(new Date().getTime() + ".wav"));
+        return file;
     }
 
     public static Context getContext() {

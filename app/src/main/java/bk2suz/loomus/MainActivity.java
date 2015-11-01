@@ -2,6 +2,8 @@ package bk2suz.loomus;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -11,9 +13,21 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -34,12 +48,18 @@ public class MainActivity extends AppCompatActivity {
     private View mPlayerListResetButton;
     private View mPlayerListDeleteToggleButton;
     private View mPatternMakerButton;
+    private View mMergeButton;
+    private View mExportButton;
+    private View mProcessingView;
 
     private Recorder mRecorder = null;
     private RecorderListener mRecorderListener;
 
     private PlayerListAdapter mPlayerListAdapter;
     private PlayerEditorView mPlayerEditorView;
+
+    private ExecutorService mExecutor;
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,6 +138,10 @@ public class MainActivity extends AppCompatActivity {
         mPlayerListResetButton = findViewById(R.id.imbResetPlaying);
         mPlayerListDeleteToggleButton = findViewById(R.id.imbDeleteToggle);
         mPatternMakerButton = findViewById(R.id.imbPatternMaker);
+        mMergeButton = findViewById(R.id.imbMerge);
+        mExportButton = findViewById(R.id.imbExport);
+        mProcessingView = findViewById(R.id.pgrProcessing);
+        mProcessingView.setVisibility(View.GONE);
 
         mPlayerListPlayButton.setVisibility(View.GONE);
         mPlayerListPauseButton.setVisibility(View.GONE);
@@ -164,6 +188,30 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mMergeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mPlayerListAdapter.getCount() ==0) return;
+
+                mProcessingView.setVisibility(View.VISIBLE);
+                mExportButton.setVisibility(View.GONE);
+                mMergeButton.setVisibility(View.GONE);
+                mergeTogetherAsync(false);
+            }
+        });
+
+        mExportButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mPlayerListAdapter.getCount() ==0) return;
+
+                mProcessingView.setVisibility(View.VISIBLE);
+                mExportButton.setVisibility(View.GONE);
+                mMergeButton.setVisibility(View.GONE);
+                mergeTogetherAsync(true);
+            }
+        });
+
         mPlayerEditorView = (PlayerEditorView) findViewById(R.id.playerEditor);
         mPlayerEditorView.setOnCloseListener(new View.OnClickListener() {
             @Override
@@ -180,6 +228,120 @@ public class MainActivity extends AppCompatActivity {
                 loadAudioSegments(recordList);
             }
         });
+
+        mExecutor = Executors.newSingleThreadExecutor();
+        mHandler = new Handler(Looper.getMainLooper());
+    }
+
+    private Runnable getFinishRunnable(final File file, final boolean save) {
+        return new Runnable() {
+            @Override
+            public void run() {
+                mProcessingView.setVisibility(View.GONE);
+                mExportButton.setVisibility(View.VISIBLE);
+                mMergeButton.setVisibility(View.VISIBLE);
+                if(file == null) return;
+                if(save) {
+                    showExportDoneMessage(file);
+                } else {
+                    mPlayerListAdapter.addNew(file);
+                }
+            }
+        };
+    }
+
+    private void showExportDoneMessage(File file) {
+        Toast.makeText(this, getResources().getString(R.string.exported_to, file.getAbsolutePath()), Toast.LENGTH_LONG).show();
+    }
+
+    private void mergeTogetherAsync(final boolean save) {
+        mExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                mergeTogether(save);
+            }
+        });
+    }
+
+    private void mergeTogether(boolean save) {
+        File outputFile = null;
+        if(save) {
+            outputFile = AppOverload.getTempAudioFile();
+        } else {
+            outputFile = AppOverload.getPermaAudioFile();
+        }
+        OutputStream outputStream = null;
+        try {
+            outputStream = new BufferedOutputStream(new FileOutputStream(outputFile));
+        } catch (FileNotFoundException e) {
+            mHandler.post(getFinishRunnable(null, save));
+            return;
+        }
+
+        ArrayList<AudioSegmentReader> readerList = new ArrayList<>();
+        for(int i=0; i<mPlayerListAdapter.getCount(); i++) {
+            Player player = mPlayerListAdapter.getItem(i);
+            if(!player.checkIsEnabled()) continue;
+            readerList.add(new AudioSegmentReader(player.getAudioSegmentRecord()));
+        }
+
+        if(readerList.size() == 0) {
+            mHandler.post(getFinishRunnable(null, save));
+            return;
+        }
+
+        long totalDurationinByte = mPlayerListAdapter.getMaxDurationInByte();
+
+        int maxBufferSize = 1024;
+        int byteBufferSize, shortBufferSize;
+        byte[] writeBytes = new byte[maxBufferSize];
+        short[] writeShorts = new short[maxBufferSize/2];
+
+        int p = 0;
+        while(p<totalDurationinByte) {
+            if(maxBufferSize>(totalDurationinByte-p)) {
+                byteBufferSize = (int) (totalDurationinByte-p);
+            } else {
+                byteBufferSize = maxBufferSize;
+            }
+            if(byteBufferSize<=0) byteBufferSize = 2;//safety
+            shortBufferSize = byteBufferSize/2;
+            Arrays.fill(writeShorts, (short) 0);
+
+            for(AudioSegmentReader reader: readerList) {
+                short[] readShorts = reader.getShorts(shortBufferSize);
+                for(int i=0; i<readShorts.length; i++) {
+                    writeShorts[i] += readShorts[i]*reader.mVolume/readerList.size();
+                }
+            }
+
+            ByteBuffer.wrap(writeBytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(writeShorts);
+            try {
+                outputStream.write(writeBytes, 0, writeBytes.length);
+                outputStream.flush();
+            } catch (IOException e) {
+                break;
+            }
+            p += byteBufferSize;
+        }
+        try {
+            outputStream.close();
+        } catch (IOException e) {
+            mHandler.post(getFinishRunnable(null, save));
+            return;
+        }
+
+        if(save) {
+            File finalFile = AppOverload.getExportAudioFile();
+            boolean result = Wave.save(1, Recorder.getSampleRateInHz(), 16, outputFile, finalFile);
+            if (!result) {
+                mHandler.post(getFinishRunnable(null, save));
+                return;
+            }
+            mHandler.post(getFinishRunnable(finalFile, save));
+        } else {
+            mHandler.post(getFinishRunnable(outputFile, save));
+        }
     }
 
     @Override
@@ -251,15 +413,12 @@ public class MainActivity extends AppCompatActivity {
             mRecorderSaveButton.setVisibility(View.GONE);
             mRecorderCancelButton.setVisibility(View.GONE);
             mTxtRecorderElapsedTime.setText(Zero);
-            //Log.d("Loga", String.format("saved at: %s", file.getAbsolutePath()));
             mRecorder.cleanIt();
             mRecorder = null;
         }
 
         @Override
-        public void onError(String message) {
-            Log.d("LOGA", message);
-        }
+        public void onError(String message) {}
 
         @Override
         public void onProgress(float timeInSeconds) {
@@ -272,6 +431,8 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         if (mRecorder != null) mRecorder.cleanIt();
         if(mPlayerListAdapter != null) mPlayerListAdapter.clear();
+        if(mExecutor != null) mExecutor.shutdownNow();
+        mExecutor = null;
     }
 
     @Override
