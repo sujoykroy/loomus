@@ -18,10 +18,10 @@ public class PlayerListAdapter extends BaseAdapter {
 
     private Player mPlayHead;
     private PlayerRegionChangeListener mPlayerRegionChangeListener;
-    private View.OnLongClickListener mOnLongClickListener;
+    private View.OnClickListener mOnItemClickListener;
 
     public PlayerListAdapter(Context context, ArrayList<AudioSegmentRecord> recordList,
-                             View.OnLongClickListener onLongClickListener) {
+                             View.OnClickListener onItemClickListener) {
         try {
             mPlayHead = new Player(null);
         } catch (Exception e) {
@@ -30,7 +30,7 @@ public class PlayerListAdapter extends BaseAdapter {
         mPlayHead.setIsEnabled(true);
         mPlayHead.addPlayerListener(new PlayHeadPlayerListener());
 
-        mOnLongClickListener = onLongClickListener;
+        mOnItemClickListener = onItemClickListener;
         mPlayerRegionChangeListener  = new PlayerRegionChangeListener();
 
         mPlayers = new ArrayList<Player>();
@@ -111,8 +111,7 @@ public class PlayerListAdapter extends BaseAdapter {
         PlayerItemView playerItemView;
         if(convertView == null) {
             playerItemView = new PlayerItemView(mContext, this);
-            playerItemView.setLongClickable(true);
-            playerItemView.setOnLongClickListener(mOnLongClickListener);
+            playerItemView.setOnClickListener(mOnItemClickListener);
 
         } else {
             playerItemView = (PlayerItemView) convertView;

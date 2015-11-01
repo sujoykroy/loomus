@@ -3,8 +3,7 @@
     android:orientation="horizontal" android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/track"
-    style="@style/track"
-    android:minHeight="60dp">
+    style="@style/track">
 
     <TextView
         android:layout_width="0dp"
@@ -32,13 +31,13 @@
         android:gravity="center_vertical"
         android:layout_weight="1" />
 
-    <bk2suz.loomus.PlayerEditorView
+    <bk2suz.loomus.AudioSegmentView
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:padding="3dp"
         android:layout_weight="4"
-        android:id="@+id/playerEditor">
-    </bk2suz.loomus.PlayerEditorView>
+        android:id="@+id/audioSegment">
+    </bk2suz.loomus.AudioSegmentView>
 
     <ImageButton
         android:layout_width="20dp"

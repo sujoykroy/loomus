@@ -145,19 +145,6 @@ public class PlayerEditorView extends FrameLayout {
     }
 
     private class EditorPlayerListener extends PlayerListener {
-
-        @Override
-        public void onError(String message) {}
-
-        @Override
-        public void onPlay() {}
-
-        @Override
-        public void onPause() {}
-
-        @Override
-        public void onSeek() {}
-
         @Override
         public void onProgress(float head) {
             mAudioSegmentView.setHead(head);

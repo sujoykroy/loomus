@@ -357,15 +357,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadAudioSegments(ArrayList<AudioSegmentRecord> recordList) {
-        mPlayerListAdapter = new PlayerListAdapter(this, recordList, new View.OnLongClickListener() {
+        mPlayerListAdapter = new PlayerListAdapter(this, recordList, new View.OnClickListener() {
             @Override
-            public boolean onLongClick(View v) {
+            public void onClick(View v) {
                 Player player = ((PlayerItemView) v).getPlayer();
                 if(player != null) {
                     mPlayerEditorView.setPlayer(player);
                     mPlayerEditorView.setVisibility(View.VISIBLE);
                 }
-                return false;
             }
         });
         ListView playerListView = (ListView) findViewById(R.id.playerListView);

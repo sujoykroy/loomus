@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Bitmap;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
@@ -25,10 +24,11 @@ public class PlayerItemView extends FrameLayout {
     private CheckBox mChkEnabled;
     private TextView mTxtDuration;
     private View mDeleteButton;
-    private PlayerEditorView mPlayerEditorView;
+    private AudioSegmentView mAudioSegmentView;
 
     private Player mPlayHead;
     private PlayerListAdapter mPlayerListAdapter;
+    private AudioSegmentPlayerListener mAudioSegmentPlayerListener;
 
     public PlayerItemView(Context context, PlayerListAdapter playerListAdapter) {
         super(context);
@@ -49,15 +49,7 @@ public class PlayerItemView extends FrameLayout {
         mTxtDuration = (TextView) rootView.findViewById(R.id.txtDuration);
         mDeleteButton = rootView.findViewById(R.id.imbDeleteSegment);
         mDeleteButton.setVisibility(GONE);
-        mPlayerEditorView = (PlayerEditorView) rootView.findViewById(R.id.playerEditor);
-        mPlayerEditorView.setOnRegionChangeListener(new PlayerEditorView.OnRegionChangeListener() {
-            @Override
-            public void onRegionChange() {
-                showDuration();
-
-            }
-        });
-        mPlayerEditorView.hideExtra();
+        mAudioSegmentView = (AudioSegmentView) rootView.findViewById(R.id.audioSegment);
 
         mChkEnabled = (CheckBox) rootView.findViewById(R.id.chkOn);
         mChkEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -81,6 +73,8 @@ public class PlayerItemView extends FrameLayout {
                 deletePlayer();
             }
         });
+
+        mAudioSegmentPlayerListener = new AudioSegmentPlayerListener();
     }
 
     public void showHideDeleteButton() {
@@ -134,11 +128,15 @@ public class PlayerItemView extends FrameLayout {
     }
 
     public void setPlayer(Player player) {
+        if(mPlayer != null) mPlayer.removePlayerListener(mAudioSegmentPlayerListener);
         mPlayer = player;
         showName();
         showDuration();
-        mPlayerEditorView.setPlayer(mPlayer);
         mChkEnabled.setChecked(mPlayer.checkIsEnabled());
+        mAudioSegmentView.setHead(mPlayer.getHead());
+        mAudioSegmentView.setRegion(mPlayer.getRegionLeft(), mPlayer.getRegionRight());
+        mPlayer.addPlayerListener(mAudioSegmentPlayerListener);
+        mPlayer.loadGraphBitmap();
     }
 
     public Player getPlayer() {
@@ -151,5 +149,16 @@ public class PlayerItemView extends FrameLayout {
 
     private void showDuration() {
         mTxtDuration.setText(String.format("%.2f", mPlayer.getDurationInSeconds()));
+    }
+
+    private class AudioSegmentPlayerListener extends PlayerListener {
+        @Override
+        public void onProgress(float head) {
+            mAudioSegmentView.setHead(head);
+        }
+        @Override
+        public void onGraphLoad(Bitmap graphBitmap) {
+            mAudioSegmentView.setBackgroundBitmap(graphBitmap);
+        }
     }
 }
