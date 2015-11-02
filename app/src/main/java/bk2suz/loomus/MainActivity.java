@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,7 +16,6 @@ import android.widget.Toast;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -244,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
                 if(save) {
                     showExportDoneMessage(file);
                 } else {
-                    mPlayerListAdapter.addNew(file);
+                    mPlayerListAdapter.addNew(file, 1);
                 }
             }
         };
@@ -349,7 +347,7 @@ public class MainActivity extends AppCompatActivity {
         if(requestCode == PATTERN_MAKER_REQUEST_CODE && resultCode == RESULT_OK) {
             String fileName =  data.getStringExtra(AudioSegmentRecord.FieldFileName);
             if(fileName != null && !fileName.isEmpty()) {
-                mPlayerListAdapter.addNew(new File(fileName));
+                mPlayerListAdapter.addNew(new File(fileName), 1);
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -406,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSave(File file) {
-            mPlayerListAdapter.addNew(file);
+            mPlayerListAdapter.addNew(file, .75f);
             mRecorderRecordButton.setVisibility(View.VISIBLE);
             mRecorderPauseButton.setVisibility(View.GONE);
             mRecorderSaveButton.setVisibility(View.GONE);

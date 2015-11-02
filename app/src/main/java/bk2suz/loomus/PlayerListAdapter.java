@@ -48,10 +48,10 @@ public class PlayerListAdapter extends BaseAdapter {
         mContext = context;
     }
 
-    public void addNew(File file) {
+    public void addNew(File file, float tempo) {
         Player player = null;
         try {
-            player = new Player(new AudioSegmentRecord(file));
+            player = new Player(new AudioSegmentRecord(file, tempo));
         } catch (Exception e) {
             return;
         }

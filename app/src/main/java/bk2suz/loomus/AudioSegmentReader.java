@@ -1,14 +1,10 @@
 package bk2suz.loomus;
 
-import android.util.Log;
-
-import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 
 /**
  * Created by sujoy on 1/11/15.

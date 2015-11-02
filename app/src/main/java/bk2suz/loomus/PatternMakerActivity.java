@@ -22,14 +22,12 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -430,6 +428,7 @@ public class PatternMakerActivity extends AppCompatActivity {
     private class PatternItemView extends FrameLayout {
         private Pattern mPattern;
         private Spinner mSpnPlayers;
+        private TextView mTxtDuration;
         private EditText mEdtMult;
         private View mBtnDelete;
 
@@ -441,12 +440,14 @@ public class PatternMakerActivity extends AppCompatActivity {
             mSpnPlayers = (Spinner) rootView.findViewById(R.id.spnPlayers);
             mEdtMult = (EditText) rootView.findViewById(R.id.edtMult);
             mSpnPlayers.setAdapter(mPlayerListAdapter);
+            mTxtDuration = (TextView) rootView.findViewById(R.id.txtDuration);
 
             mSpnPlayers.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     if (mPattern == null) return;
                     mPattern.mPlayer = mPlayerListAdapter.getItem(position);
+                    showDuration();
                 }
 
                 @Override
@@ -482,6 +483,15 @@ public class PatternMakerActivity extends AppCompatActivity {
             mPattern = pattern;
             mSpnPlayers.setSelection(mPlayerListAdapter.getItemPosition(mPattern.mPlayer));
             mEdtMult.setText(String.valueOf(mPattern.mMult));
+            showDuration();
+        }
+
+        private void showDuration() {
+            float duration = 1;
+            if(mPattern.mPlayer.getAudioSegmentRecord() != null) {
+                duration = mPattern.mPlayer.getDurationInSeconds();
+            }
+            mTxtDuration.setText(String.format("%.2f", duration));
         }
     }
 

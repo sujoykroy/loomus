@@ -7,9 +7,10 @@
     <bk2suz.loomus.AudioSegmentView
         android:id="@+id/audioSegment"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="30dp"
         android:visibility="visible"
-        android:layout_centerVertical="true">
+        android:layout_centerVertical="true"
+        android:layout_margin="3dp">
     </bk2suz.loomus.AudioSegmentView>
 
     <TextView

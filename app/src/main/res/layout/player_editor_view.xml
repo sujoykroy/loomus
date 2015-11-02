@@ -45,7 +45,27 @@
                     android:layout_height="wrap_content"
                     android:text="0" />
             </LinearLayout>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Start from:"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00.00"
+                    android:id="@+id/txtStartFrom"
+                    android:layout_marginLeft="3dp" />
+            </LinearLayout>
         </LinearLayout>
+
     </RelativeLayout>
 
     <bk2suz.loomus.SliderView
@@ -71,6 +91,7 @@
         android:layout_weight="1"
         android:visibility="visible">
     </bk2suz.loomus.RegionSliderView>
+
     <bk2suz.loomus.SliderView
         android:id="@+id/tempoSlider"
         android:layout_width="match_parent"

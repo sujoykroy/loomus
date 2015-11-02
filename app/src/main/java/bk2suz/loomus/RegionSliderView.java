@@ -6,7 +6,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -14,7 +13,8 @@ import android.view.View;
  * Created by sujoy on 19/9/15.
  */
 public class RegionSliderView extends View {
-    private static Paint sBoxFillPaint = new Paint();
+    private static Paint sLeftBoxFillPaint = new Paint();
+    private static Paint sRightBoxFillPaint = new Paint();
     private static Paint sBoxBorderPaint = new Paint();
     private static float BoxSizeFraction = .2F;
 
@@ -23,8 +23,11 @@ public class RegionSliderView extends View {
     }
 
     static {
-        sBoxFillPaint.setStyle(Paint.Style.FILL);
-        sBoxFillPaint.setColor(Color.parseColor("#c77dbf"));
+        sLeftBoxFillPaint.setStyle(Paint.Style.FILL);
+        sLeftBoxFillPaint.setColor(Color.parseColor("#3b1e38"));
+
+        sRightBoxFillPaint.setStyle(Paint.Style.FILL);
+        sRightBoxFillPaint.setColor(Color.parseColor("#c77dbf"));
 
         sBoxBorderPaint.setStrokeWidth(1);
         sBoxBorderPaint.setStyle(Paint.Style.STROKE);
@@ -105,8 +108,8 @@ public class RegionSliderView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawRoundRect(mLeftBox, 5, 5, sBoxFillPaint);
-        canvas.drawRoundRect(mRightBox, 5, 5, sBoxFillPaint);
+        canvas.drawRoundRect(mLeftBox, 5, 5, sLeftBoxFillPaint);
+        canvas.drawRoundRect(mRightBox, 5, 5, sRightBoxFillPaint);
 
         canvas.drawRoundRect(mLeftBox, 5, 5, sBoxBorderPaint);
         canvas.drawRoundRect(mRightBox, 5, 5, sBoxBorderPaint);

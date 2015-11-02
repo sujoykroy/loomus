@@ -12,13 +12,23 @@
         android:src="@android:drawable/ic_delete" />
 
     <Spinner
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/spnPlayers"
-        android:layout_weight="2"
+        android:layout_weight="1"
         android:layout_gravity="center_vertical"
         android:popupBackground="#ffffff"
         android:spinnerMode="dialog" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00.00"
+        android:layout_gravity="center_vertical"
+        android:id="@+id/txtDuration"
+        android:layout_marginLeft="3dp"
+        android:layout_marginRight="3dp"
+        android:gravity="right" />
 
     <TextView
         android:layout_width="wrap_content"

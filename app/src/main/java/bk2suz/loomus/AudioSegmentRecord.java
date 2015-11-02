@@ -86,14 +86,14 @@ public class AudioSegmentRecord {
         mLengthInByte = file.length();
     }
 
-    public AudioSegmentRecord(File file) {
+    public AudioSegmentRecord(File file, float tempo) {
         mFileName = file.getName();
         mName = file.getName();
         mStartFromInByte = 0;
         mEndToInByte = file.length();
         mLengthInByte = file.length();
         mVolume = 0.25F;
-        mTempo = 1;
+        mTempo = tempo;
         add();
     }
 
@@ -251,7 +251,7 @@ public class AudioSegmentRecord {
                     File[] files = AppOverload.getPermaDir().listFiles();
                     if(files != null) {
                         for(File file: files) {
-                            AudioSegmentRecord record= new AudioSegmentRecord(file);
+                            AudioSegmentRecord record= new AudioSegmentRecord(file, 1);
                             recordList.add(record);
                         }
                     }

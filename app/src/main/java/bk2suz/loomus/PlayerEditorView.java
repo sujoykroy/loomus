@@ -20,6 +20,7 @@ public class PlayerEditorView extends FrameLayout {
     private View mBtnClose;
     private TextView mTxtDuration;
     private TextView mTxtName;
+    private TextView mTxtStartFrom;
     private AudioSegmentView mAudioSegmentView;
     private RegionSliderView mRegionSliderView;
     private SliderView mVolumeSliderView;
@@ -49,6 +50,7 @@ public class PlayerEditorView extends FrameLayout {
         mBtnClose = rootView.findViewById(R.id.imvClose);
         mTxtDuration = (TextView) rootView.findViewById(R.id.txtDuration);
         mTxtName = (TextView) rootView.findViewById(R.id.txtName);
+        mTxtStartFrom = (TextView) rootView.findViewById(R.id.txtStartFrom);
         mAudioSegmentView = (AudioSegmentView) rootView.findViewById(R.id.audioSegment);
         mRegionSliderView = (RegionSliderView) rootView.findViewById(R.id.regionSlider);
         mVolumeSliderView = (SliderView) rootView.findViewById(R.id.volumeSlider);
@@ -97,6 +99,7 @@ public class PlayerEditorView extends FrameLayout {
     private void showDuration() {
         if(mPlayer == null) return;
         mTxtDuration.setText(String.format("%.2f", mPlayer.getDurationInSeconds()));
+        mTxtStartFrom.setText(String.format("%.2f", mPlayer.getStartFromInSeconds()));
     }
 
     private class TempoSliderListener extends SliderView.OnChangeListener {

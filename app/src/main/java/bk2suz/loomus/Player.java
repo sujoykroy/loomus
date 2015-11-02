@@ -377,6 +377,10 @@ public class Player implements Runnable {
         return mSegmentRecord.getStartFromInByte()/(float) mSegmentRecord.getLengthInByte();
     }
 
+    public float getStartFromInSeconds() {
+        return mSegmentRecord.getStartFromInByte()* 0.5F / (float) Recorder.getSampleRateInHz();
+    }
+
     public float getRegionRight() {
         return mSegmentRecord.getEndToInByte()/(float) mSegmentRecord.getLengthInByte();
     }
