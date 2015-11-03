@@ -81,6 +81,7 @@ public class AudioSegmentRecord {
         mEndToInByte = cursor.getLong(4);
         mVolume = cursor.getFloat(5);
         mTempo = cursor.getFloat(6);
+        if(mTempo>1) mTempo = 1;
 
         File file = AppOverload.getPermaAudioFile(mFileName);
         mLengthInByte = file.length();
@@ -240,7 +241,8 @@ public class AudioSegmentRecord {
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
 
                 if(db != null) {
-                    Cursor cursor = db.query(TableName, Columns, null, null, null, null, null);
+                    String orderBy = String.format("%s DESC", FieldRowId);
+                    Cursor cursor = db.query(TableName, Columns, null, null, null, null, orderBy);
                     while(cursor.moveToNext()) {
                         AudioSegmentRecord record = new AudioSegmentRecord(cursor);
                         recordList.add(record);

@@ -48,6 +48,12 @@ public class AppOverload extends Application {
         return file;
     }
 
+    public static File getExportAudioFile(String filename) {
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_MUSIC), filename);
+        return file;
+    }
+
     public static Context getContext() {
         return sApplication;
     }

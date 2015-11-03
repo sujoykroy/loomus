@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Player implements Runnable {
     public static float sVolume = 1;
-    public static final int TrackBufferMultiplier = 2;
+    public static final int TrackBufferMultiplier = 4;
     private static ExecutorService sGraphExecutor = Executors.newFixedThreadPool(1);
 
     private boolean mIsPlaying;
@@ -85,7 +85,7 @@ public class Player implements Runnable {
             mVolume = mSegmentRecord.getVolume();
             mTempo = mSegmentRecord.getTempo();
         }
-        if(withTrack) createTrack(mTempo);
+        //if(withTrack) createTrack(mTempo);
 
         mPlayerListeners = new ArrayList<PlayerListener>();
         mOnRegionChangeListeners = new ArrayList<>();
@@ -111,8 +111,8 @@ public class Player implements Runnable {
     }
 
     private void createTrack(float tempo) throws Exception {
-        float sampleRate = Recorder.getSampleRateInHz() * tempo;
-        int minBufferSize= AudioTrack.getMinBufferSize(
+        float sampleRate = Recorder.getSampleRateInHz() * tempo;;
+        int minBufferSize = AudioTrack.getMinBufferSize(
                 (int) sampleRate,
                 AudioFormat.CHANNEL_IN_STEREO,
                 AudioFormat.ENCODING_PCM_16BIT
@@ -122,7 +122,7 @@ public class Player implements Runnable {
         AudioTrack audioTrack = null;
         try {
             audioTrack = new AudioTrack(
-                    AudioManager.STREAM_MUSIC, (int) sampleRate,
+                    AudioManager.STREAM_VOICE_CALL, (int) sampleRate,
                     AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT,
                     trackBufferSize,
                     AudioTrack.MODE_STREAM);
@@ -133,7 +133,7 @@ public class Player implements Runnable {
         if(mAudioTrack != null) mAudioTrack.release();
         mAudioTrack = audioTrack;
         mTrackBufferSize = trackBufferSize;
-        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*.25*1000F/sampleRate);
+        mPlayPeriodInMilli = (int) Math.floor(mTrackBufferSize*.5*1000F/sampleRate);
     }
 
     public AudioSegmentRecord getAudioSegmentRecord() {
@@ -205,6 +205,9 @@ public class Player implements Runnable {
                 if(!mIsEnabled) return;
 
                 if(!mIsPlaying) {
+                    try {
+                        if(mAudioTrack == null) createTrack(mTempo);
+                    } catch (Exception e) {}
                     mIsPlaying = true;
                     mAudioTrack.play();
                     schedulePlaying();
@@ -295,36 +298,48 @@ public class Player implements Runnable {
 
         long startTime = new Date().getTime();
         byte[] bytes = new byte[mTrackBufferSize];
-        int readCount= 0;
-        try {
-            readCount = mInputStream.read(bytes, 0, mTrackBufferSize);
-        } catch (IOException e) {
-            mHandler.post(getOnErrorRunnable(e.getMessage()));
-            return;
-        }
-        if(readCount>0) {
-            mCurrentPositionInByte += readCount;
 
-            short[] shorts = new short[readCount/2];
-            ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+        int zeroCount = 0;
+        int totalReadCount = 0;
 
-            short[] interleaved = new short[readCount];
-            for(int i=0; i<readCount/2; i++) {
-                shorts[i] = (short) (sVolume*mVolume*shorts[i]);
-                interleaved[i*2] = shorts[i];
-                interleaved[i*2+1] = shorts[i];
-            }
-            mAudioTrack.write(interleaved, 0, readCount);
-            mAudioTrack.flush();
-            mHandler.post(mOnProgressRunnable);
-        }
-        if (mCurrentPositionInByte>=mDurationInByte) {
+        int readCount;
+        while(totalReadCount<mTrackBufferSize && zeroCount<2) {
             try {
-                mInputStream.reset();
-                mCurrentPositionInByte = 0;
-                mInputStream.skipSured(mStartFromInByte + mCurrentPositionInByte);
+                readCount = mInputStream.read(bytes, 0, (int) Math.min(mDurationInByte, (mTrackBufferSize-totalReadCount)));
             } catch (IOException e) {
+                mHandler.post(getOnErrorRunnable(e.getMessage()));
                 return;
+            }
+            if (readCount > 0) {
+                mCurrentPositionInByte += readCount;
+
+                short[] shorts = new short[readCount / 2];
+                ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+
+                short[] interleaved = new short[readCount];
+                for (int i = 0; i < readCount / 2; i++) {
+                    shorts[i] = (short) (sVolume * mVolume * shorts[i]);
+                    interleaved[i * 2] = shorts[i];
+                    interleaved[i * 2 + 1] = shorts[i];
+                }
+                mAudioTrack.write(interleaved, 0, readCount);
+                mAudioTrack.flush();
+                mHandler.post(mOnProgressRunnable);
+            }
+            if (mCurrentPositionInByte >= mDurationInByte) {
+                try {
+                    mInputStream.reset();
+                    mCurrentPositionInByte = 0;
+                    mInputStream.skipSured(mStartFromInByte);
+                } catch (IOException e) {
+                    return;
+                }
+            }
+            totalReadCount += readCount;
+            if(readCount == 0) {
+                zeroCount++;
+            } else {
+                zeroCount = 0;
             }
         }
         long elapsedTime = new Date().getTime()-startTime;

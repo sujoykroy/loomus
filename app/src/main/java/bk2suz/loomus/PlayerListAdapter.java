@@ -59,7 +59,7 @@ public class PlayerListAdapter extends BaseAdapter {
             mPlayHead.setDurationInByte(player.getDurationInByte());
         }
         mPlayerRegionChangeListener.OnRegionChange(player);
-        mPlayers.add(player);
+        mPlayers.add(0, player);
         player.addOnRegionChangeListener(mPlayerRegionChangeListener);
         notifyDataSetChanged();
     }

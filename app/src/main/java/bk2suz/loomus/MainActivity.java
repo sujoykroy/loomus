@@ -404,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSave(File file) {
-            mPlayerListAdapter.addNew(file, .75f);
+            mPlayerListAdapter.addNew(file, 1);
             mRecorderRecordButton.setVisibility(View.VISIBLE);
             mRecorderPauseButton.setVisibility(View.GONE);
             mRecorderSaveButton.setVisibility(View.GONE);

@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +31,7 @@ public class Recorder implements Runnable {
     private static int sChannelConfig;
     private static int sEncoding;
     private static final int ReadSizeMultiplier = 1;
-    private static final int AudioRecorderBufferMultiplier = ReadSizeMultiplier + 0;
+    private static final int AudioRecorderBufferMultiplier = ReadSizeMultiplier + 1;
 
     private boolean mIsRecording;
     private boolean mIsFinished;
@@ -82,7 +83,7 @@ public class Recorder implements Runnable {
 
         mIsRecording = false;
         mAudioReaderExecutor = Executors.newScheduledThreadPool(1);
-        mReadPeriodInMilli = (long) Math.floor(1000*mReadSizeInBytes /(float) sSampleRateInHz);
+        mReadPeriodInMilli = (long) Math.floor(1000*mReadSizeInBytes*.5 /(float) sSampleRateInHz);
 
         mMaxElapsedTime = maxElapsedTime;
         mElapsedTime = 0;
@@ -255,15 +256,16 @@ public class Recorder implements Runnable {
     @Override
     public void run() {
         if(!mIsRecording) return;
+        long startTime = new Date().getTime();
         short[] shorts = new short[mReadSizeInBytes/2];
-        int readCount = mAudioRecorder.read(shorts, 0, mReadSizeInBytes/2);
+        int readCount = mAudioRecorder.read(shorts, 0, shorts.length);
         if(readCount>0) {
             mElapsedTime += readCount/(float) sSampleRateInHz;
             if(mMaxElapsedTime ==0 || mElapsedTime<=mMaxElapsedTime) {
                 byte[] bytes = new byte[mReadSizeInBytes];
                 ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(shorts);
                 try {
-                    mWriteStream.write(bytes, 0, readCount*2);
+                    mWriteStream.write(bytes, 0, bytes.length);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -271,7 +273,8 @@ public class Recorder implements Runnable {
         }
         if(mMaxElapsedTime ==0 || mElapsedTime<mMaxElapsedTime) {
             mHandler.post(mOnProgressRunnable);
-            mAudioReaderExecutor.schedule(this, mReadPeriodInMilli, TimeUnit.MILLISECONDS);
+            long elapsedTime = new Date().getTime()-startTime;
+            mAudioReaderExecutor.schedule(this, mReadPeriodInMilli - elapsedTime, TimeUnit.MILLISECONDS);
         } else {
             pause();
         }
