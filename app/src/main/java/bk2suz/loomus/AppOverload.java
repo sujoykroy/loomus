@@ -11,10 +11,19 @@ import java.util.Date;
  * Created by sujoy on 14/9/15.
  */
 public class AppOverload extends Application {
+    private static final String ExternalFolderName = "Loomus";
     private static final String TempAudioFolderName = "tempAudio";
     private static final String PermaAudioFolderName = "permaAudio";
     private static final String GraphFolderName = "graph";
     private static Context sApplication;
+
+    private static String sExternalSdPath = null;
+    private static final String[] sPossibleExternalSdPaths = {
+            "/mnt/extSdCard",
+            "/mnt/sdcard/ext_sd",
+            "/mnt/external",
+            "/mnt/sdcard/external_sd"
+    };
 
     @Override
     public void onCreate() {
@@ -26,20 +35,33 @@ public class AppOverload extends Application {
         return new File(sApplication.getDir(TempAudioFolderName, MODE_PRIVATE), String.valueOf(new Date().getTime()));
     }
 
-    public static File getPermaAudioFile() {
-        return new File(sApplication.getDir(PermaAudioFolderName, MODE_PRIVATE), String.valueOf(new Date().getTime()));
+    public static File getPermaDir()  {
+        if(sExternalSdPath != null) return new File(sExternalSdPath);
+        for(String path: sPossibleExternalSdPaths) {
+            File folder=new File(new File(path), ExternalFolderName);
+            if(folder.exists() || folder.mkdirs()) {
+                sExternalSdPath = folder.getAbsolutePath();
+                break;
+            }
+        }
+        if(sExternalSdPath != null)  {
+            return new File(sExternalSdPath);
+        }
+        return sApplication.getDir(PermaAudioFolderName, MODE_PRIVATE);
     }
 
     public static File getPermaAudioFile(String fileName) {
-        return new File(sApplication.getDir(PermaAudioFolderName, MODE_PRIVATE), fileName);
+        return new File(getPermaDir(), fileName);
+    }
+
+    public static File getPermaAudioFile() {
+        return getPermaAudioFile(String.valueOf(new Date().getTime()));
     }
 
     public static File getGraphFile(String fileName) {
-        return new File(sApplication.getDir(GraphFolderName, MODE_PRIVATE), fileName);
-    }
-
-    public static File getPermaDir() {
-        return sApplication.getDir(PermaAudioFolderName, MODE_PRIVATE);
+        File graphFolder = new File(getPermaDir(), GraphFolderName);
+        graphFolder.mkdirs();
+        return new File(graphFolder, fileName);
     }
 
     public static File getExportAudioFile() {

@@ -268,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
         if(save) {
             outputFile = AppOverload.getTempAudioFile();
         } else {
-            outputFile = AppOverload.getPermaAudioFile();
+            outputFile = AppOverload.getExportAudioFile();
         }
         OutputStream outputStream = null;
         try {
