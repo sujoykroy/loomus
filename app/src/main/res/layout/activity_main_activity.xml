@@ -13,23 +13,40 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginRight="3dp">
+            <bk2suz.loomus.LevelView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/button_unpressed"
+                android:id="@+id/lvlRecordLevel">
+            </bk2suz.loomus.LevelView>
+        </FrameLayout>
+
         <Spinner
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:id="@+id/spnMaxTimeOptions"
             android:layout_weight="1"
-            android:gravity="center_vertical|center_horizontal" />
+            android:gravity="center_vertical|center_horizontal"
+            android:background="@drawable/button_unpressed"
+            android:layout_marginRight="3dp" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:id="@+id/txtElapsedTime"
             android:layout_weight="1"
-            android:gravity="center_vertical|center_horizontal" />
+            android:gravity="center_vertical|center_horizontal"
+            android:background="@drawable/button_unpressed"
+            android:layout_marginRight="3dp" />
 
         <ImageButton
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:id="@+id/imbRecord"
             android:src="@android:drawable/ic_btn_speak_now"
             android:layout_gravity="center"
@@ -37,7 +54,7 @@
 
         <ImageButton
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:id="@+id/imbPause"
             android:src="@android:drawable/ic_media_pause"
             android:layout_gravity="center"

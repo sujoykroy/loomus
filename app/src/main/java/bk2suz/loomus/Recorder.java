@@ -52,6 +52,8 @@ public class Recorder implements Runnable {
     private Handler mHandler;
     private Runnable mOnProgressRunnable;
 
+    private float mLastMaxValue;
+
     public Recorder(float maxElapsedTime, RecorderListener recorderListener) throws Exception {
         if(!sConfigured) configure();
 
@@ -93,7 +95,9 @@ public class Recorder implements Runnable {
         mOnProgressRunnable = new Runnable() {
             @Override
             public void run() {
-                if (mRecorderListener != null) mRecorderListener.onProgress(mElapsedTime);
+                if (mRecorderListener != null) {
+                    mRecorderListener.onProgress(mElapsedTime, mLastMaxValue/(float)Short.MAX_VALUE);
+                }
             }
         };
     }
@@ -256,6 +260,7 @@ public class Recorder implements Runnable {
     @Override
     public void run() {
         if(!mIsRecording) return;
+        float maxValue = 0;
         long startTime = new Date().getTime();
         short[] shorts = new short[mReadSizeInBytes/2];
         int readCount = mAudioRecorder.read(shorts, 0, shorts.length);
@@ -269,9 +274,13 @@ public class Recorder implements Runnable {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                for(int i=0; i<shorts.length; i++) {
+                    if(maxValue<Math.abs(shorts[i])) maxValue = Math.abs(shorts[i]);
+                }
             }
         }
         if(mMaxElapsedTime ==0 || mElapsedTime<mMaxElapsedTime) {
+            mLastMaxValue = maxValue;
             mHandler.post(mOnProgressRunnable);
             long elapsedTime = new Date().getTime()-startTime;
             mAudioReaderExecutor.schedule(this, mReadPeriodInMilli - elapsedTime, TimeUnit.MILLISECONDS);

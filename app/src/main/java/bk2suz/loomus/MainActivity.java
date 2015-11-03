@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private View mRecorderSaveButton;
     private View mRecorderCancelButton;
     private Spinner mSpinnerMaxTimeOptions;
+    private LevelView mRecordLevelView;
 
     private View mPlayerListPlayButton;
     private View mPlayerListPauseButton;
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         );
         mSpinnerMaxTimeOptions = (Spinner) findViewById(R.id.spnMaxTimeOptions);
         mSpinnerMaxTimeOptions.setAdapter(maxTimeAdapter);
+        mRecordLevelView = (LevelView) findViewById(R.id.lvlRecordLevel);
 
         mRecorderListener = new ActivityRecorderListener();
         mTxtRecorderElapsedTime = (TextView) findViewById(R.id.txtElapsedTime);
@@ -382,6 +384,7 @@ public class MainActivity extends AppCompatActivity {
             mRecorderSaveButton.setVisibility(View.GONE);
             mRecorderCancelButton.setVisibility(View.GONE);
             mTxtRecorderElapsedTime.setText(Zero);
+            mRecordLevelView.setValue(0);
             mRecorder.cleanIt();
             mRecorder = null;
         }
@@ -410,6 +413,7 @@ public class MainActivity extends AppCompatActivity {
             mRecorderSaveButton.setVisibility(View.GONE);
             mRecorderCancelButton.setVisibility(View.GONE);
             mTxtRecorderElapsedTime.setText(Zero);
+            mRecordLevelView.setValue(0);
             mRecorder.cleanIt();
             mRecorder = null;
         }
@@ -418,8 +422,9 @@ public class MainActivity extends AppCompatActivity {
         public void onError(String message) {}
 
         @Override
-        public void onProgress(float timeInSeconds) {
+        public void onProgress(float timeInSeconds, float amplitude) {
             mTxtRecorderElapsedTime.setText(String.format("%.2f", timeInSeconds));
+            mRecordLevelView.setValue(amplitude);
         }
     }
 

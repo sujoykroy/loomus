@@ -11,5 +11,5 @@ public abstract class RecorderListener {
     public abstract void onSave(File file);
     public abstract void onCancel();
     public abstract void onError(String message);
-    public abstract void onProgress(float timeInSeconds);
+    public abstract void onProgress(float timeInSeconds, float amplitude);
 }
