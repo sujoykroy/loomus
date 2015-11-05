@@ -1,6 +1,8 @@
 package bk2suz.loomus;
 
+import android.app.ActionBar;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -64,6 +66,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_activity);
+        getSupportActionBar().setIcon(R.mipmap.ic_launcher);
+        getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_HOME | ActionBar.DISPLAY_SHOW_TITLE);
+
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
         ArrayList<String> maxTimeList = new ArrayList<String>();
         for(float t=0; t<10; t+=0.5) {
@@ -101,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
                 float maxTime = 0;
                 if (!optionName.equals(Dash)) maxTime = Float.parseFloat(optionName);
                 try {
+                    if(mRecorder != null) mRecorder.cleanIt();
                     mRecorder = new Recorder(maxTime, mRecorderListener);
                 } catch (Exception e) {
                     mRecorder = null;
@@ -231,6 +238,7 @@ public class MainActivity extends AppCompatActivity {
 
         mExecutor = Executors.newSingleThreadExecutor();
         mHandler = new Handler(Looper.getMainLooper());
+
     }
 
     private Runnable getFinishRunnable(final File file, final boolean save) {
@@ -268,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
         if(save) {
             outputFile = AppOverload.getTempAudioFile();
         } else {
-            outputFile = AppOverload.getExportAudioFile();
+            outputFile = AppOverload.getPermaAudioFile();
         }
         OutputStream outputStream = null;
         try {
@@ -330,15 +338,17 @@ public class MainActivity extends AppCompatActivity {
             mHandler.post(getFinishRunnable(null, save));
             return;
         }
-
         if(save) {
-            File finalFile = AppOverload.getExportAudioFile();
-            boolean result = Wave.save(1, Recorder.getSampleRateInHz(), 16, outputFile, finalFile);
+            File wavFile = AppOverload.getNewExportAudioFile(".wav");
+            boolean result = Wave.save(1, Recorder.getSampleRateInHz(), 16, outputFile, wavFile);
+            outputFile.delete();
+
             if (!result) {
                 mHandler.post(getFinishRunnable(null, save));
                 return;
             }
-            mHandler.post(getFinishRunnable(finalFile, save));
+            mHandler.post(getFinishRunnable(wavFile, save));
+
         } else {
             mHandler.post(getFinishRunnable(outputFile, save));
         }
@@ -387,6 +397,7 @@ public class MainActivity extends AppCompatActivity {
             mRecordLevelView.setValue(0);
             mRecorder.cleanIt();
             mRecorder = null;
+            AppOverload.clearTempAudioDir();
         }
 
         @Override
@@ -416,6 +427,7 @@ public class MainActivity extends AppCompatActivity {
             mRecordLevelView.setValue(0);
             mRecorder.cleanIt();
             mRecorder = null;
+            AppOverload.clearTempAudioDir();
         }
 
         @Override

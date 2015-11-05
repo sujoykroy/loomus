@@ -20,6 +20,8 @@ public class PlayerListAdapter extends BaseAdapter {
     private PlayerRegionChangeListener mPlayerRegionChangeListener;
     private View.OnClickListener mOnItemClickListener;
 
+    private boolean mShowDeleteOption = false;
+
     public PlayerListAdapter(Context context, ArrayList<AudioSegmentRecord> recordList,
                              View.OnClickListener onItemClickListener) {
         try {
@@ -129,8 +131,9 @@ public class PlayerListAdapter extends BaseAdapter {
     }
 
     public void toggleDelete() {
+        mShowDeleteOption = !mShowDeleteOption;
         for(Player player: mPlayers) {
-            player.toggleDeletable();
+            player.setIsDeletable(mShowDeleteOption);
         }
         notifyDataSetChanged();
     }

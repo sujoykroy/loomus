@@ -31,8 +31,22 @@ public class AppOverload extends Application {
         sApplication = this;
     }
 
+    public static File getTempAudioDir() {
+        return sApplication.getDir(TempAudioFolderName, MODE_PRIVATE);
+    }
+
+    public static void clearTempAudioDir() {
+        File[] files = getTempAudioDir().listFiles();
+        if(files == null) return;
+        try {
+            for(File file: files) {
+                file.delete();
+            }
+        } catch (Exception e) {}
+    }
+
     public static File getTempAudioFile() {
-        return new File(sApplication.getDir(TempAudioFolderName, MODE_PRIVATE), String.valueOf(new Date().getTime()));
+        return new File(getTempAudioDir(), String.valueOf(new Date().getTime()));
     }
 
     public static File getPermaDir()  {
@@ -64,9 +78,9 @@ public class AppOverload extends Application {
         return new File(graphFolder, fileName);
     }
 
-    public static File getExportAudioFile() {
+    public static File getNewExportAudioFile(String extension) {
         File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_MUSIC), String.valueOf(new Date().getTime() + ".wav"));
+                Environment.DIRECTORY_MUSIC), String.valueOf(new Date().getTime() + extension));
         return file;
     }
 

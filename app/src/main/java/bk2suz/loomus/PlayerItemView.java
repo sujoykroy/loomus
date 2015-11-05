@@ -58,7 +58,7 @@ public class PlayerItemView extends FrameLayout {
                 if(mPlayer == null) return;
                 if(isChecked) {
                     mPlayer.setIsEnabled(true);
-                    mPlayer.seek(mPlayHead.getCurrentPositionInByte());
+                    mPlayer.seek(mPlayHead.getRelativeCurrentPositionInByte());
                     if(mPlayHead.checkIsPlaying()) mPlayer.play();
                 } else {
                     mPlayer.pause();

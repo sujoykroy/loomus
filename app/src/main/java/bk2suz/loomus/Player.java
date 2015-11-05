@@ -95,12 +95,12 @@ public class Player implements Runnable {
         }
 
         mIsPlaying = false;
-        mCurrentPositionInByte = 0;
+        mCurrentPositionInByte = mStartFromInByte;
 
         mOnProgressRunnable = new Runnable() {
             @Override
             public void run() {
-                float head = mCurrentPositionInByte/(float) mDurationInByte;
+                float head = (mCurrentPositionInByte-mStartFromInByte)/(float) mDurationInByte;
                 for(PlayerListener listener: mPlayerListeners) {
                     listener.onProgress(head);
                 }
@@ -265,16 +265,14 @@ public class Player implements Runnable {
         Runnable task = new Runnable() {
             @Override
             public void run() {
+                long pos = mStartFromInByte + ((long)(byteCount*mTempo))%mDurationInByte;
+                if (pos % 2 == 1) pos += 1;
+                while(pos>=mEndToInByte) pos -= mDurationInByte;
+
+                mCurrentPositionInByte = pos;
                 try {
                     mInputStream.reset();
-                } catch (IOException e) {
-                    mHandler.post(getOnErrorRunnable(e.getMessage()));
-                    return;
-                }
-                mCurrentPositionInByte =  ((long)(byteCount*mTempo))%mDurationInByte;
-                if(mCurrentPositionInByte%2 ==1) mCurrentPositionInByte+=1;
-                try {
-                    mInputStream.skipSured(mStartFromInByte + mCurrentPositionInByte);
+                    mInputStream.skipSured(mCurrentPositionInByte);
                 } catch (IOException e) {
                     mHandler.post(getOnErrorRunnable(e.getMessage()));
                     return;
@@ -291,7 +289,7 @@ public class Player implements Runnable {
 
         if(mSegmentRecord == null) {
             mCurrentPositionInByte += mTrackBufferSize;
-            mCurrentPositionInByte %= mDurationInByte;
+            while(mCurrentPositionInByte>=mEndToInByte) mCurrentPositionInByte -= mDurationInByte;
             mHandler.post(mOnProgressRunnable);
             return;
         }
@@ -304,6 +302,15 @@ public class Player implements Runnable {
 
         int readCount;
         while(totalReadCount<mTrackBufferSize && zeroCount<2) {
+            if (mCurrentPositionInByte >= mEndToInByte || zeroCount>0) {
+                try {
+                    mInputStream.reset();
+                    mCurrentPositionInByte = mStartFromInByte;
+                    mInputStream.skipSured(mStartFromInByte);
+                } catch (IOException e) {
+                    mHandler.post(getOnErrorRunnable(e.getMessage()));
+                }
+            }
             try {
                 readCount = mInputStream.read(bytes, 0, (int) Math.min(mDurationInByte, (mTrackBufferSize-totalReadCount)));
             } catch (IOException e) {
@@ -326,17 +333,8 @@ public class Player implements Runnable {
                 mAudioTrack.flush();
                 mHandler.post(mOnProgressRunnable);
             }
-            if (mCurrentPositionInByte >= mDurationInByte) {
-                try {
-                    mInputStream.reset();
-                    mCurrentPositionInByte = 0;
-                    mInputStream.skipSured(mStartFromInByte);
-                } catch (IOException e) {
-                    return;
-                }
-            }
             totalReadCount += readCount;
-            if(readCount == 0) {
+            if(readCount <= 0) {
                 zeroCount++;
             } else {
                 zeroCount = 0;
@@ -374,18 +372,18 @@ public class Player implements Runnable {
         return mIsPlaying;
     }
 
-    public long getCurrentPositionInByte() {
+    public long getRelativeCurrentPositionInByte() {
         return mCurrentPositionInByte;
     }
 
     public float getHead() {
-        return mCurrentPositionInByte/(float) mSegmentRecord.getLengthInByte();
+        return (mCurrentPositionInByte-mStartFromInByte)/(float) mSegmentRecord.getLengthInByte();
     }
 
-    public void setHead(float head) {//fraction of total original audio segment..
-        long byteCount = ((long) (head*mSegmentRecord.getLengthInByte())-mStartFromInByte);
+    public void setHead(float head) {
+        long byteCount = (long) (head*mSegmentRecord.getLengthInByte());
         if (byteCount%2 == 1) byteCount += 1;
-        seek(byteCount);
+        seek((long) (byteCount/mTempo));
     }
 
     public float getRegionLeft() {
@@ -455,8 +453,8 @@ public class Player implements Runnable {
         mDurationInByte = mEndToInByte - mStartFromInByte;
     }
 
-    public void toggleDeletable() {
-        mIsDeletable = !mIsDeletable;
+    public void setIsDeletable(boolean value) {
+        mIsDeletable = value;
     }
 
     public boolean checkIsDeletable() {

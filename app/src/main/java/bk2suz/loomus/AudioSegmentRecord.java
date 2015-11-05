@@ -93,7 +93,7 @@ public class AudioSegmentRecord {
         mStartFromInByte = 0;
         mEndToInByte = file.length();
         mLengthInByte = file.length();
-        mVolume = 0.25F;
+        mVolume = 1;
         mTempo = tempo;
         add();
     }

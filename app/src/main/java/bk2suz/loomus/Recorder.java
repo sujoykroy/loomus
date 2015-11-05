@@ -202,7 +202,6 @@ public class Recorder implements Runnable {
 
                 mAudioReaderExecutor.shutdownNow();
                 mAudioFile.delete();
-
                 mHandler.post(getOnSaveRunnable(outputFile));
             }
         };
