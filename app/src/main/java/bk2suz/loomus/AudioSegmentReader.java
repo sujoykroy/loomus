@@ -25,7 +25,7 @@ public class AudioSegmentReader {
         mEndToInByte = mRecord.getEndToInByte();
         mCurrentPositionInByte =  mStartFromInByte;
         mTempo = mRecord.getTempo();
-        mVolume = Player.sVolume * mRecord.getVolume();
+        mVolume = mRecord.getVolume();
         try {
             mInputStream = new SkipFixedInputStream(new FileInputStream(mRecord.getAudioFile()));
         } catch (FileNotFoundException e) {

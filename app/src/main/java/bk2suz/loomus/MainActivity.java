@@ -34,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String Dash = "-";
     private static final String Zero = "0.0";
     private static final int PATTERN_MAKER_REQUEST_CODE = 1;
+    private static final int SEQUENCE_MAKER_REQUEST_CODE = 2;
 
     private TextView mTxtRecorderElapsedTime;
 
@@ -44,11 +45,14 @@ public class MainActivity extends AppCompatActivity {
     private Spinner mSpinnerMaxTimeOptions;
     private LevelView mRecordLevelView;
 
+    private SliderView mVolumeSliderView;
+
     private View mPlayerListPlayButton;
     private View mPlayerListPauseButton;
     private View mPlayerListResetButton;
     private View mPlayerListDeleteToggleButton;
     private View mPatternMakerButton;
+    private View mSequenceMakerButton;
     private View mMergeButton;
     private View mExportButton;
     private View mProcessingView;
@@ -69,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().setIcon(R.mipmap.ic_launcher);
         getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_HOME | ActionBar.DISPLAY_SHOW_TITLE);
 
-        setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        setVolumeControlStream(Player.streamType);
 
         ArrayList<String> maxTimeList = new ArrayList<String>();
         for(float t=0; t<10; t+=0.5) {
@@ -107,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
                 float maxTime = 0;
                 if (!optionName.equals(Dash)) maxTime = Float.parseFloat(optionName);
                 try {
-                    if(mRecorder != null) mRecorder.cleanIt();
+                    if (mRecorder != null) mRecorder.cleanIt();
                     mRecorder = new Recorder(maxTime, mRecorderListener);
                 } catch (Exception e) {
                     mRecorder = null;
@@ -140,11 +144,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mVolumeSliderView = (SliderView) findViewById(R.id.volumeSlider);
+        mVolumeSliderView.setValue(Player.sVolume);
+        mVolumeSliderView.setOnChangeListener(new SliderView.OnChangeListener() {
+            @Override
+            public void onChange(float value, boolean ongoing) {
+                Player.sVolume = value;
+            }
+        });
+
         mPlayerListPlayButton = findViewById(R.id.imbPlay);
         mPlayerListPauseButton = findViewById(R.id.imbPausePlaying);
         mPlayerListResetButton = findViewById(R.id.imbResetPlaying);
         mPlayerListDeleteToggleButton = findViewById(R.id.imbDeleteToggle);
         mPatternMakerButton = findViewById(R.id.imbPatternMaker);
+        mSequenceMakerButton = findViewById(R.id.imbSequenceMaker);
         mMergeButton = findViewById(R.id.imbMerge);
         mExportButton = findViewById(R.id.imbExport);
         mProcessingView = findViewById(R.id.pgrProcessing);
@@ -192,6 +206,14 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(getBaseContext(), PatternMakerActivity.class);
                 startActivityForResult(intent, PATTERN_MAKER_REQUEST_CODE);
+            }
+        });
+
+        mSequenceMakerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getBaseContext(), SequencerActivity.class);
+                startActivityForResult(intent, SEQUENCE_MAKER_REQUEST_CODE);
             }
         });
 
@@ -356,7 +378,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(requestCode == PATTERN_MAKER_REQUEST_CODE && resultCode == RESULT_OK) {
+        if((requestCode == PATTERN_MAKER_REQUEST_CODE ||
+                requestCode == SEQUENCE_MAKER_REQUEST_CODE) && resultCode == RESULT_OK) {
             String fileName =  data.getStringExtra(AudioSegmentRecord.FieldFileName);
             if(fileName != null && !fileName.isEmpty()) {
                 mPlayerListAdapter.addNew(new File(fileName), 1);

@@ -13,6 +13,7 @@
     <string name="editing_of">Editing Audio [%s]</string>
     <string name="duration_in_seconds">Duration(Seconds):</string>
     <string name="pattern">Pattern</string>
+    <string name="sequence">Sequence</string>
     <string name="silence">--Silence--</string>
     <string name="exported_to">Audio mix is saved at %s</string>
 </resources>

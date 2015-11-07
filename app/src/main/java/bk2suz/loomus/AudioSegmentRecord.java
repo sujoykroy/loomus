@@ -5,10 +5,25 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.os.Handler;
 import android.os.Looper;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -98,12 +113,20 @@ public class AudioSegmentRecord {
         add();
     }
 
+    public boolean equals(AudioSegmentRecord record) {
+        return record != null && mRowId == record.mRowId;
+    }
+
     public long getLengthInByte() {
         return mLengthInByte;
     }
 
     public long getStartFromInByte() {
         return mStartFromInByte;
+    }
+
+    public float getStartFromInPercent() {
+        return mStartFromInByte/(float) mLengthInByte;
     }
 
     public void setStartFromInByte(long value) {
@@ -116,10 +139,25 @@ public class AudioSegmentRecord {
         return mEndToInByte;
     }
 
+    public float getEndToInPercent() {
+        return mEndToInByte/(float) mLengthInByte;
+    }
+
     public void setEndToInByte(long value) {
         if(value>mLengthInByte) value = mLengthInByte;
         mEndToInByte = value;
         if(mEndToInByte%2 == 1) mEndToInByte += 1;
+    }
+
+    public float getDurationInSeconds() {
+        return getTemoCorrectedDurationInByte() * 0.5F / (float) Recorder.getSampleRateInHz();
+    }
+
+    public long getDurationInByte() {
+        return mEndToInByte-mStartFromInByte;
+    }
+    public long getTemoCorrectedDurationInByte() {
+        return (long) ((mEndToInByte-mStartFromInByte)/mTempo);
     }
 
     public String getName() {
@@ -222,7 +260,121 @@ public class AudioSegmentRecord {
         sDbExecutor.execute(task);
     }
 
-    private static Runnable getOnRecordListLoadRunnable(final ArrayList<AudioSegmentRecord> recordList, final OnLoadListener<ArrayList<AudioSegmentRecord>> listener) {
+    public void saveWaveGraph() {
+        float width = 1000F;
+        float height = 400F;
+
+        Bitmap bitmap = Bitmap.createBitmap((int) width, (int) height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        File audioFile = getAudioFile();
+        File graphFile = getWaveGraphFile();
+
+        float pixelToAmplitude = (float) Math.floor((Short.MAX_VALUE-Short.MIN_VALUE)/height);
+        if(pixelToAmplitude==0F) pixelToAmplitude = 1F;//safety
+        float amplitudeToPixel = 1F/pixelToAmplitude;
+
+        float pixelForZeroAmplitude = (Short.MAX_VALUE-Short.MIN_VALUE)*0.5F*amplitudeToPixel;
+
+        int pixelToByteCount = (int) Math.floor(audioFile.length()/width);
+        if(pixelToByteCount%2 == 1) pixelToByteCount += 1;
+        if(pixelToByteCount == 0) pixelToByteCount = 2;//safetey
+
+        int byteByfferSize = pixelToByteCount;
+        int maxByteBufferSize = 1024;
+        if(byteByfferSize>maxByteBufferSize) {
+            int mult = (int) Math.ceil(pixelToByteCount/(float) maxByteBufferSize);
+            byteByfferSize = (int) (pixelToByteCount/mult);
+            if(byteByfferSize%2 == 1) byteByfferSize += 1;//2's multiple
+            pixelToByteCount = byteByfferSize*mult;
+        }
+
+        InputStream audioStream = null;
+        try {
+            audioStream = new BufferedInputStream(new FileInputStream(audioFile));
+        } catch (Exception e) {
+            return;
+        }
+
+        int cumulativeByteReadCount = 0;
+        int byteReadCount;
+        byte[] bytes = new byte[byteByfferSize];
+
+        Paint paint = new Paint();
+        paint.setColor(Color.parseColor("#ccca23"));
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(2);
+
+        float x = 0;
+        int count = 0;
+        StringBuilder bl = new StringBuilder();
+        while(true) {
+            try {
+                byteReadCount = audioStream.read(bytes, 0, byteByfferSize);
+            } catch (IOException e) {
+                break;
+            }
+            if(byteReadCount<=0) break;
+
+            if (cumulativeByteReadCount == 0) {
+                count ++;
+                short[] shorts = new short[byteReadCount / 2];
+                ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+                canvas.drawLine(x, pixelForZeroAmplitude, x, pixelForZeroAmplitude + shorts[0]*amplitudeToPixel, paint);
+                x += 1F;
+            }
+            cumulativeByteReadCount += byteReadCount;
+            if(cumulativeByteReadCount>=pixelToByteCount) cumulativeByteReadCount %= pixelToByteCount;
+        }
+        try {
+            audioStream.close();
+        } catch (IOException e) {}
+
+        OutputStream os = null;
+        try {
+            os = new BufferedOutputStream(new FileOutputStream(graphFile));
+        } catch (FileNotFoundException e) {}
+
+        if(os != null) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
+            try {
+                os.flush();
+                os.close();
+            } catch (IOException e) {}
+        }
+    }
+
+    public Bitmap getWaveGraphBitmap() {
+        if (getWaveGraphFile().isFile()) {
+            saveWaveGraph();
+        }
+
+        float width = 400F;
+        float height = 100F;
+
+        String fileAbsPath = getWaveGraphFile().getAbsolutePath();
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(fileAbsPath, options);
+        if(options.outWidth < 0) return null;
+
+        float scaleX = options.outWidth/width;
+        float scaleY = options.outHeight/height;
+        float scale =  Math.max(scaleX, scaleX);
+
+        options.inJustDecodeBounds = false;
+        options.inDither = true;
+        options.inSampleSize = (int) scale;
+
+        Bitmap origBitmap = BitmapFactory.decodeFile(fileAbsPath, options);
+        if(origBitmap == null) return null;
+
+        Bitmap bitmap = Bitmap.createScaledBitmap(origBitmap, (int)width, (int)height, true);
+        return bitmap;
+    }
+
+    private static Runnable getOnRecordListLoadRunnable(final ArrayList<AudioSegmentRecord> recordList,
+                                                        final OnLoadListener<ArrayList<AudioSegmentRecord>> listener) {
         return new Runnable() {
             @Override
             public void run() {

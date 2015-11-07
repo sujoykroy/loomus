@@ -25,6 +25,10 @@
             android:name=".PatternMakerActivity"
             android:label="@string/pattern" >
         </activity>
+        <activity
+            android:name=".SequencerActivity"
+            android:label="@string/sequence" >
+        </activity>
     </application>
 
 </manifest>
