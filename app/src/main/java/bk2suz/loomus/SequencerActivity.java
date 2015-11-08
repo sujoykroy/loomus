@@ -692,18 +692,18 @@ public class SequencerActivity extends AppCompatActivity {
                         } catch (IOException e) {
                             break;
                         }
-                        totalReadCount += readCount;
-                        mStreamCurrentBytePos += readCount;
                         if(readCount == 0) {
                             zeroCount++;
                         } else {
                             zeroCount = 0;
-                        }
-                        mCurrentBytePos += readCount/mTempo;
-                        if(mCurrentBytePos%2 == 0) mCurrentBytePos -= 1;
-                        if(mCurrentBytePos <2 ) mCurrentBytePos = 2;
-                        if(mCurrentBytePos>=mEndBytePos) {
-                            resetStream();
+                            totalReadCount += readCount;
+                            mStreamCurrentBytePos += readCount;
+                            mCurrentBytePos += readCount/mTempo;
+                            if(mCurrentBytePos%2 == 1) mCurrentBytePos -= 1;
+                            if(mCurrentBytePos <2 ) mCurrentBytePos = 2;
+                            if(mCurrentBytePos>=mEndBytePos) {
+                                resetStream();
+                            }
                         }
                     } else {
                         mCurrentBytePos += mTrackBufferSize-totalReadCount;
