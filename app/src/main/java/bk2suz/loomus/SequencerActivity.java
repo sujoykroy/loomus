@@ -509,24 +509,25 @@ public class SequencerActivity extends AppCompatActivity {
             mEndIndex = 0;
             try {
                 createTrack(mTempo);
-            } catch (Exception e) {}
-            if(mAudioSegmentRecord == null) {
-                if(mAudioTrack != null) mAudioTrack.release();
-                mAudioTrack = null;
-            }
-            try {
-                mInputStream = new SkipFixedInputStream(new FileInputStream(mAudioSegmentRecord.getAudioFile()));
             } catch (Exception e) {
-                return;
             }
-            mVolume = mAudioSegmentRecord.getVolume();
-            mInputStream.mark((int) mAudioSegmentRecord.getLengthInByte() + 1);
-            try {
-                mInputStream.reset();
-                mInputStream.skipSured(mAudioSegmentRecord.getStartFromInByte());
-            } catch (IOException e) {}
-            mStreamCurrentBytePos = mAudioSegmentRecord.getStartFromInByte();
-
+            if(mAudioSegmentRecord != null) {
+                mAudioTrack.release();
+                mAudioTrack = null;
+                try {
+                    mInputStream = new SkipFixedInputStream(new FileInputStream(mAudioSegmentRecord.getAudioFile()));
+                } catch (Exception e) {
+                    return;
+                }
+                mVolume = mAudioSegmentRecord.getVolume();
+                mInputStream.mark((int) mAudioSegmentRecord.getLengthInByte() + 1);
+                try {
+                    mInputStream.reset();
+                    mInputStream.skipSured(mAudioSegmentRecord.getStartFromInByte());
+                } catch (IOException e) {
+                }
+                mStreamCurrentBytePos = mAudioSegmentRecord.getStartFromInByte();
+            }
             this.reformat();
         }
 
@@ -669,7 +670,7 @@ public class SequencerActivity extends AppCompatActivity {
             long startTime = new Date().getTime();
 
             if (mAudioSegmentRecord != null) {
-                byte[] bytes = new byte[mTrackBufferSize];
+                /*byte[] bytes = new byte[mTrackBufferSize];
                 Arrays.fill(bytes, (byte) 0);
                 int totalReadCount = 0;
                 int readCount;
@@ -723,14 +724,95 @@ public class SequencerActivity extends AppCompatActivity {
                     interleaved[i * 2 + 1] = shorts[i];
                 }
                 mAudioTrack.write(interleaved, 0, interleaved.length);
-                mAudioTrack.flush();
+                mAudioTrack.flush();*/
             } else {
-                if(mCurrentBytePos>=mEndBytePos) mCurrentBytePos = mStartBytePos;
+                if(mCurrentBytePos>=mEndBytePos) {
+                    mCurrentBytePos = 0;
+                    for (SequencerItem si : mSequencerItemListAdapter.mSequencerItemList) {
+                        if(si.mAudioSegmentRecord == null) continue;
+                        si.resetStream();
+                        si.mCurrentBytePos = 0;
+                    }
+                }
+                int byteBufferSize = mTrackBufferSize;
+                int shortBufferSize = byteBufferSize/2;
+
+                byte[] readBytes = new byte[byteBufferSize];
+                short[] readShorts = new short[byteBufferSize/2];
+
+                short[] writeShorts = new short[byteBufferSize/2];
+                Arrays.fill(writeShorts, (short) 0);
+
+                for(SequencerItem si: mSequencerItemListAdapter.mSequencerItemList) {
+                    if(si.mAudioSegmentRecord == null) continue;
+                    int siWriteCount = 0;
+                    int zeroCount = 0;
+                    Arrays.fill(readBytes, (byte) 0);
+                    while(siWriteCount<byteBufferSize && zeroCount<2) {
+                        if (si.mCurrentBytePos < si.mStartBytePos && si.mCurrentBytePos + byteBufferSize > si.mStartBytePos) {
+                            siWriteCount += si.mStartBytePos - si.mCurrentBytePos;
+                            si.mCurrentBytePos = si.mStartBytePos;
+                        }
+                        if (si.mCurrentBytePos >= si.mStartBytePos && si.mCurrentBytePos < si.mEndBytePos) {
+                            if(si.mStreamCurrentBytePos>=si.mAudioSegmentRecord.getEndToInByte()) {
+                                si.resetStream();
+                            }
+
+                            int streamBufferSize = (int) ((byteBufferSize-siWriteCount)*si.mTempo);
+                            streamBufferSize = (int) Math.min(si.mAudioSegmentRecord.getDurationInByte(), streamBufferSize);
+                            streamBufferSize = (int) Math.min(si.mAudioSegmentRecord.getEndToInByte() - si.mStreamCurrentBytePos, streamBufferSize);
+
+                            if(streamBufferSize%2==1) streamBufferSize -= 1;
+                            if(streamBufferSize<2) streamBufferSize = 2;
+
+                            byte[] streamByteBuffer = new byte[streamBufferSize];
+                            int streamReadCount = 0;
+                            try {
+                                streamReadCount = si.mInputStream.read(streamByteBuffer, 0, streamBufferSize);
+                            } catch (IOException e) {
+                                break;
+                            }
+                            si.mStreamCurrentBytePos += streamReadCount;
+                            for(float i=0; i<streamBufferSize; i+= si.mTempo) {
+                                if(siWriteCount>=byteBufferSize) break;
+                                int pos = (int) Math.floor(i);
+                                readBytes[siWriteCount] = streamByteBuffer[pos];
+                                siWriteCount++;
+                                si.mCurrentBytePos++;
+                            }
+                            if(siWriteCount%2 == 1 && siWriteCount<byteBufferSize) {
+                                siWriteCount += 1;
+                                si.mCurrentBytePos++;
+                            }
+                            zeroCount = streamReadCount == 0 ? zeroCount + 1:  0;
+                        } else {
+                            si.mCurrentBytePos += byteBufferSize - siWriteCount;
+                            siWriteCount = byteBufferSize;
+                        }
+                    }
+                    ByteBuffer.wrap(readBytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(readShorts);
+                    for(int i=0; i<readShorts.length; i++) {
+                        writeShorts[i] += readShorts[i]*si.mVolume;
+                    }
+                }
+
+                short[] interleaved = new short[mTrackBufferSize];
+                for (int i = 0; i < writeShorts.length; i++) {
+                    writeShorts[i] = (short) (Player.sVolume * mVolume * writeShorts[i]);
+                    interleaved[i * 2] = writeShorts[i];
+                    interleaved[i * 2 + 1] = writeShorts[i];
+                }
+                mAudioTrack.write(interleaved, 0, interleaved.length);
+                //mAudioTrack.flush();
+
                 mCurrentBytePos += mTrackBufferSize;
             }
             mHandler.post(mOnProgressRunnable);
 
             long elapsedTime = new Date().getTime()-startTime;
+            /*if(mAudioSegmentRecord == null) {
+                Log.d("LOGA", String.format("mPlayPeriodInMilli - elapsedTime=%d", mPlayPeriodInMilli - elapsedTime));
+            }*/
             mAudioWriterExecutor.schedule(this, mPlayPeriodInMilli - elapsedTime, TimeUnit.MILLISECONDS);
         }
     }
@@ -924,6 +1006,9 @@ public class SequencerActivity extends AppCompatActivity {
                     boolean running = (sequenceItem.mStartBytePos<=sequenceItem.mCurrentBytePos &&
                             sequenceItem.mCurrentBytePos<=sequenceItem.mEndBytePos);
                     mTxtDurationIndex.setBackgroundColor(running ? Color.GREEN : Color.argb(0,0,0,0));
+                    /*if(sequenceItem.mAudioSegmentRecord != null) {
+                        Log.d("LOGA", String.format("running %s", running));
+                    }*/
                     /*
                     float value = 100*sequenceItem.mCurrentBytePos/(float) mSequenceDurationInBytes;
                     mSeekBar.setProgress((int) value);
